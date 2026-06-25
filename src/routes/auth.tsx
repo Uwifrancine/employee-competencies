@@ -31,7 +31,12 @@ function AuthPage() {
       .then(({ count }) => {
         const exists = (count ?? 0) > 0;
         setHasAdmin(exists);
-        if (!exists) setMode("register");
+        if (!exists) {
+          setMode("register");
+          setFullName("Demo Admin");
+          setEmail("admin@demo.local");
+          setPassword("admin123");
+        }
       });
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) navigate({ to: "/dashboard" });
@@ -85,7 +90,9 @@ function AuthPage() {
             <p className="text-sm text-muted-foreground mt-1">
               {mode === "login"
                 ? "Use the credentials provided by your admin."
-                : "This account will own the workspace."}
+                : hasAdmin
+                  ? "This account will own the workspace."
+                  : "Demo values pre-filled — edit if you like, then click Create account."}
             </p>
           </div>
 
