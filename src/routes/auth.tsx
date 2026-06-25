@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { signUpFirstAdmin } from "@/lib/admin.functions";
+import { getAdminSetupStatus, signUpFirstAdmin } from "@/lib/admin.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const navigate = useNavigate();
   const signUp = useServerFn(signUpFirstAdmin);
+  const getSetupStatus = useServerFn(getAdminSetupStatus);
   const [mode, setMode] = useState<"login" | "register">("login");
   const [hasAdmin, setHasAdmin] = useState<boolean | null>(null);
   const [email, setEmail] = useState("");
@@ -24,24 +25,26 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase
-      .from("user_roles")
-      .select("user_id", { count: "exact", head: true })
-      .eq("role", "admin")
-      .then(({ count }) => {
-        const exists = (count ?? 0) > 0;
+    getSetupStatus()
+      .then(({ hasAdmin: exists }) => {
         setHasAdmin(exists);
-        if (!exists) {
-          setMode("register");
-          setFullName("Demo Admin");
-          setEmail("admin@demo.local");
-          setPassword("admin123");
+        if (exists) {
+          setMode("login");
+          return;
         }
+        setMode("register");
+        setFullName("Demo Admin");
+        setEmail("admin@demo.local");
+        setPassword("admin123");
+      })
+      .catch(() => {
+        setHasAdmin(true);
+        setMode("login");
       });
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) navigate({ to: "/dashboard" });
     });
-  }, [navigate]);
+  }, [getSetupStatus, navigate]);
 
   const onLogin = async () => {
     setLoading(true);
@@ -60,6 +63,10 @@ function AuthPage() {
       toast.success("Welcome! You are the first admin.");
       navigate({ to: "/dashboard" });
     } catch (e: any) {
+      if (e?.message?.includes("admin already exists")) {
+        setHasAdmin(true);
+        setMode("login");
+      }
       toast.error(e?.message ?? "Could not register");
     } finally {
       setLoading(false);
@@ -127,7 +134,7 @@ function AuthPage() {
               className="w-full text-sm text-muted-foreground hover:text-primary"
               onClick={() => setMode(mode === "login" ? "register" : "login")}
             >
-              {mode === "login" ? "Need to create the first admin?" : "Have an account? Sign in"}
+              {mode === "login" ? "Admin access is invite-only" : "Have an account? Sign in"}
             </button>
           )}
         </div>
