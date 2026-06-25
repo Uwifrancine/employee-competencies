@@ -9,38 +9,218 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedSupervisorRouteImport } from './routes/_authenticated/supervisor'
+import { Route as AuthenticatedEvaluationsRouteImport } from './routes/_authenticated/evaluations'
+import { Route as AuthenticatedDevelopmentPlansRouteImport } from './routes/_authenticated/development-plans'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedChangePasswordRouteImport } from './routes/_authenticated/change-password'
+import { Route as AuthenticatedEvaluationsNewRouteImport } from './routes/_authenticated/evaluations/new'
+import { Route as AuthenticatedAdminJobTitlesRouteImport } from './routes/_authenticated/admin/job-titles'
+import { Route as AuthenticatedAdminEmployeesRouteImport } from './routes/_authenticated/admin/employees'
+import { Route as AuthenticatedAdminCompetenciesRouteImport } from './routes/_authenticated/admin/competencies'
+import { Route as AuthenticatedSupervisorEvaluateEmployeeIdRouteImport } from './routes/_authenticated/supervisor/evaluate.$employeeId'
+import { Route as AuthenticatedSupervisorPlanNewEmployeeIdRouteImport } from './routes/_authenticated/supervisor/plan.new.$employeeId'
 
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedSupervisorRoute = AuthenticatedSupervisorRouteImport.update({
+  id: '/supervisor',
+  path: '/supervisor',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedEvaluationsRoute =
+  AuthenticatedEvaluationsRouteImport.update({
+    id: '/evaluations',
+    path: '/evaluations',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDevelopmentPlansRoute =
+  AuthenticatedDevelopmentPlansRouteImport.update({
+    id: '/development-plans',
+    path: '/development-plans',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedChangePasswordRoute =
+  AuthenticatedChangePasswordRouteImport.update({
+    id: '/change-password',
+    path: '/change-password',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedEvaluationsNewRoute =
+  AuthenticatedEvaluationsNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AuthenticatedEvaluationsRoute,
+  } as any)
+const AuthenticatedAdminJobTitlesRoute =
+  AuthenticatedAdminJobTitlesRouteImport.update({
+    id: '/admin/job-titles',
+    path: '/admin/job-titles',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminEmployeesRoute =
+  AuthenticatedAdminEmployeesRouteImport.update({
+    id: '/admin/employees',
+    path: '/admin/employees',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminCompetenciesRoute =
+  AuthenticatedAdminCompetenciesRouteImport.update({
+    id: '/admin/competencies',
+    path: '/admin/competencies',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSupervisorEvaluateEmployeeIdRoute =
+  AuthenticatedSupervisorEvaluateEmployeeIdRouteImport.update({
+    id: '/evaluate/$employeeId',
+    path: '/evaluate/$employeeId',
+    getParentRoute: () => AuthenticatedSupervisorRoute,
+  } as any)
+const AuthenticatedSupervisorPlanNewEmployeeIdRoute =
+  AuthenticatedSupervisorPlanNewEmployeeIdRouteImport.update({
+    id: '/plan/new/$employeeId',
+    path: '/plan/new/$employeeId',
+    getParentRoute: () => AuthenticatedSupervisorRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/change-password': typeof AuthenticatedChangePasswordRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/development-plans': typeof AuthenticatedDevelopmentPlansRoute
+  '/evaluations': typeof AuthenticatedEvaluationsRouteWithChildren
+  '/supervisor': typeof AuthenticatedSupervisorRouteWithChildren
+  '/admin/competencies': typeof AuthenticatedAdminCompetenciesRoute
+  '/admin/employees': typeof AuthenticatedAdminEmployeesRoute
+  '/admin/job-titles': typeof AuthenticatedAdminJobTitlesRoute
+  '/evaluations/new': typeof AuthenticatedEvaluationsNewRoute
+  '/supervisor/evaluate/$employeeId': typeof AuthenticatedSupervisorEvaluateEmployeeIdRoute
+  '/supervisor/plan/new/$employeeId': typeof AuthenticatedSupervisorPlanNewEmployeeIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/change-password': typeof AuthenticatedChangePasswordRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/development-plans': typeof AuthenticatedDevelopmentPlansRoute
+  '/evaluations': typeof AuthenticatedEvaluationsRouteWithChildren
+  '/supervisor': typeof AuthenticatedSupervisorRouteWithChildren
+  '/admin/competencies': typeof AuthenticatedAdminCompetenciesRoute
+  '/admin/employees': typeof AuthenticatedAdminEmployeesRoute
+  '/admin/job-titles': typeof AuthenticatedAdminJobTitlesRoute
+  '/evaluations/new': typeof AuthenticatedEvaluationsNewRoute
+  '/supervisor/evaluate/$employeeId': typeof AuthenticatedSupervisorEvaluateEmployeeIdRoute
+  '/supervisor/plan/new/$employeeId': typeof AuthenticatedSupervisorPlanNewEmployeeIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/change-password': typeof AuthenticatedChangePasswordRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/development-plans': typeof AuthenticatedDevelopmentPlansRoute
+  '/_authenticated/evaluations': typeof AuthenticatedEvaluationsRouteWithChildren
+  '/_authenticated/supervisor': typeof AuthenticatedSupervisorRouteWithChildren
+  '/_authenticated/admin/competencies': typeof AuthenticatedAdminCompetenciesRoute
+  '/_authenticated/admin/employees': typeof AuthenticatedAdminEmployeesRoute
+  '/_authenticated/admin/job-titles': typeof AuthenticatedAdminJobTitlesRoute
+  '/_authenticated/evaluations/new': typeof AuthenticatedEvaluationsNewRoute
+  '/_authenticated/supervisor/evaluate/$employeeId': typeof AuthenticatedSupervisorEvaluateEmployeeIdRoute
+  '/_authenticated/supervisor/plan/new/$employeeId': typeof AuthenticatedSupervisorPlanNewEmployeeIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/change-password'
+    | '/dashboard'
+    | '/development-plans'
+    | '/evaluations'
+    | '/supervisor'
+    | '/admin/competencies'
+    | '/admin/employees'
+    | '/admin/job-titles'
+    | '/evaluations/new'
+    | '/supervisor/evaluate/$employeeId'
+    | '/supervisor/plan/new/$employeeId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/change-password'
+    | '/dashboard'
+    | '/development-plans'
+    | '/evaluations'
+    | '/supervisor'
+    | '/admin/competencies'
+    | '/admin/employees'
+    | '/admin/job-titles'
+    | '/evaluations/new'
+    | '/supervisor/evaluate/$employeeId'
+    | '/supervisor/plan/new/$employeeId'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/change-password'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/development-plans'
+    | '/_authenticated/evaluations'
+    | '/_authenticated/supervisor'
+    | '/_authenticated/admin/competencies'
+    | '/_authenticated/admin/employees'
+    | '/_authenticated/admin/job-titles'
+    | '/_authenticated/evaluations/new'
+    | '/_authenticated/supervisor/evaluate/$employeeId'
+    | '/_authenticated/supervisor/plan/new/$employeeId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +228,148 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/supervisor': {
+      id: '/_authenticated/supervisor'
+      path: '/supervisor'
+      fullPath: '/supervisor'
+      preLoaderRoute: typeof AuthenticatedSupervisorRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/evaluations': {
+      id: '/_authenticated/evaluations'
+      path: '/evaluations'
+      fullPath: '/evaluations'
+      preLoaderRoute: typeof AuthenticatedEvaluationsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/development-plans': {
+      id: '/_authenticated/development-plans'
+      path: '/development-plans'
+      fullPath: '/development-plans'
+      preLoaderRoute: typeof AuthenticatedDevelopmentPlansRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/change-password': {
+      id: '/_authenticated/change-password'
+      path: '/change-password'
+      fullPath: '/change-password'
+      preLoaderRoute: typeof AuthenticatedChangePasswordRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/evaluations/new': {
+      id: '/_authenticated/evaluations/new'
+      path: '/new'
+      fullPath: '/evaluations/new'
+      preLoaderRoute: typeof AuthenticatedEvaluationsNewRouteImport
+      parentRoute: typeof AuthenticatedEvaluationsRoute
+    }
+    '/_authenticated/admin/job-titles': {
+      id: '/_authenticated/admin/job-titles'
+      path: '/admin/job-titles'
+      fullPath: '/admin/job-titles'
+      preLoaderRoute: typeof AuthenticatedAdminJobTitlesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/employees': {
+      id: '/_authenticated/admin/employees'
+      path: '/admin/employees'
+      fullPath: '/admin/employees'
+      preLoaderRoute: typeof AuthenticatedAdminEmployeesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/competencies': {
+      id: '/_authenticated/admin/competencies'
+      path: '/admin/competencies'
+      fullPath: '/admin/competencies'
+      preLoaderRoute: typeof AuthenticatedAdminCompetenciesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/supervisor/evaluate/$employeeId': {
+      id: '/_authenticated/supervisor/evaluate/$employeeId'
+      path: '/evaluate/$employeeId'
+      fullPath: '/supervisor/evaluate/$employeeId'
+      preLoaderRoute: typeof AuthenticatedSupervisorEvaluateEmployeeIdRouteImport
+      parentRoute: typeof AuthenticatedSupervisorRoute
+    }
+    '/_authenticated/supervisor/plan/new/$employeeId': {
+      id: '/_authenticated/supervisor/plan/new/$employeeId'
+      path: '/plan/new/$employeeId'
+      fullPath: '/supervisor/plan/new/$employeeId'
+      preLoaderRoute: typeof AuthenticatedSupervisorPlanNewEmployeeIdRouteImport
+      parentRoute: typeof AuthenticatedSupervisorRoute
+    }
   }
 }
 
+interface AuthenticatedEvaluationsRouteChildren {
+  AuthenticatedEvaluationsNewRoute: typeof AuthenticatedEvaluationsNewRoute
+}
+
+const AuthenticatedEvaluationsRouteChildren: AuthenticatedEvaluationsRouteChildren =
+  {
+    AuthenticatedEvaluationsNewRoute: AuthenticatedEvaluationsNewRoute,
+  }
+
+const AuthenticatedEvaluationsRouteWithChildren =
+  AuthenticatedEvaluationsRoute._addFileChildren(
+    AuthenticatedEvaluationsRouteChildren,
+  )
+
+interface AuthenticatedSupervisorRouteChildren {
+  AuthenticatedSupervisorEvaluateEmployeeIdRoute: typeof AuthenticatedSupervisorEvaluateEmployeeIdRoute
+  AuthenticatedSupervisorPlanNewEmployeeIdRoute: typeof AuthenticatedSupervisorPlanNewEmployeeIdRoute
+}
+
+const AuthenticatedSupervisorRouteChildren: AuthenticatedSupervisorRouteChildren =
+  {
+    AuthenticatedSupervisorEvaluateEmployeeIdRoute:
+      AuthenticatedSupervisorEvaluateEmployeeIdRoute,
+    AuthenticatedSupervisorPlanNewEmployeeIdRoute:
+      AuthenticatedSupervisorPlanNewEmployeeIdRoute,
+  }
+
+const AuthenticatedSupervisorRouteWithChildren =
+  AuthenticatedSupervisorRoute._addFileChildren(
+    AuthenticatedSupervisorRouteChildren,
+  )
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedChangePasswordRoute: typeof AuthenticatedChangePasswordRoute
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedDevelopmentPlansRoute: typeof AuthenticatedDevelopmentPlansRoute
+  AuthenticatedEvaluationsRoute: typeof AuthenticatedEvaluationsRouteWithChildren
+  AuthenticatedSupervisorRoute: typeof AuthenticatedSupervisorRouteWithChildren
+  AuthenticatedAdminCompetenciesRoute: typeof AuthenticatedAdminCompetenciesRoute
+  AuthenticatedAdminEmployeesRoute: typeof AuthenticatedAdminEmployeesRoute
+  AuthenticatedAdminJobTitlesRoute: typeof AuthenticatedAdminJobTitlesRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedChangePasswordRoute: AuthenticatedChangePasswordRoute,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedDevelopmentPlansRoute: AuthenticatedDevelopmentPlansRoute,
+  AuthenticatedEvaluationsRoute: AuthenticatedEvaluationsRouteWithChildren,
+  AuthenticatedSupervisorRoute: AuthenticatedSupervisorRouteWithChildren,
+  AuthenticatedAdminCompetenciesRoute: AuthenticatedAdminCompetenciesRoute,
+  AuthenticatedAdminEmployeesRoute: AuthenticatedAdminEmployeesRoute,
+  AuthenticatedAdminJobTitlesRoute: AuthenticatedAdminJobTitlesRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
