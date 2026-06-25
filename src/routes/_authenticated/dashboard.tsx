@@ -65,7 +65,7 @@ function Dashboard() {
   const onSeed = async () => {
     setSeeding(true);
     try {
-      const res = await seed({ data: {} });
+      const res = await seed();
       if (res.alreadySeeded) {
         toast.info("Demo data already exists.");
       } else {
