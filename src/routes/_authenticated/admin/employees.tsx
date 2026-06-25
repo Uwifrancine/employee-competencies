@@ -84,7 +84,8 @@ function EmployeesPage() {
   };
 
   const updateField = async (id: string, field: "job_title_id" | "supervisor_id", value: string | null) => {
-    const { error } = await supabase.from("profiles").update({ [field]: value }).eq("id", id);
+    const patch: Record<string, string | null> = { [field]: value };
+    const { error } = await supabase.from("profiles").update(patch as any).eq("id", id);
     if (error) return toast.error(error.message);
     load();
   };
