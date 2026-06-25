@@ -31,7 +31,12 @@ function AuthPage() {
       .then(({ count }) => {
         const exists = (count ?? 0) > 0;
         setHasAdmin(exists);
-        if (!exists) setMode("register");
+        if (!exists) {
+          setMode("register");
+          setFullName("Demo Admin");
+          setEmail("admin@demo.local");
+          setPassword("admin123");
+        }
       });
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) navigate({ to: "/dashboard" });

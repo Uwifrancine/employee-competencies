@@ -91,7 +91,7 @@ export const signUpFirstAdmin = createServerFn({ method: "POST" })
     z
       .object({
         email: z.string().trim().email().max(255),
-        password: z.string().min(8).max(128),
+        password: z.string().min(6).max(128),
         fullName: z.string().trim().min(1).max(120),
       })
       .parse(input),

@@ -22,7 +22,7 @@ function ChangePassword() {
   const [loading, setLoading] = useState(false);
 
   const submit = async () => {
-    if (pwd.length < 8) return toast.error("Use at least 8 characters");
+    if (pwd.length < 6) return toast.error("Use at least 6 characters");
     if (pwd !== pwd2) return toast.error("Passwords don't match");
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password: pwd });
