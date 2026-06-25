@@ -70,7 +70,7 @@ export const inviteEmployee = createServerFn({ method: "POST" })
     // Best-effort: enqueue temp-password email; ignore if email infra not set up
     let emailSent = false;
     try {
-      const { error: enqErr } = await supabaseAdmin.rpc("enqueue_email", {
+      const { error: enqErr } = await (supabaseAdmin.rpc as any)("enqueue_email", {
         queue_name: "transactional_emails",
         payload: {
           template: "employee_invite",
