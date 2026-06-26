@@ -1,60 +1,82 @@
 ## Goal
+Restructure the app around four explicit roles — **Admin, HR, Supervisor, Employee** — with clear responsibilities, plus add quizzes and reporting.
 
-Make it trivial to get into the app and explore every screen with realistic content.
+## Roles & permissions
 
-## 1. Pre-fill the first-admin form (`src/routes/auth.tsx`)
+| Capability | Admin | HR | Supervisor | Employee |
+|---|---|---|---|---|
+| Manage roles (assign Admin/HR/Supervisor/Employee to any user) | ✅ | — | — | — |
+| Create / edit employees (invite, reset password) | ✅ | — | — | — |
+| Create / edit job titles | ✅ | ✅ | — | — |
+| Assign job title to employee | ✅ | ✅ | — | — |
+| Assign supervisor to employee | ✅ | ✅ | — | — |
+| Create / edit competencies (per job title) | ✅ | ✅ | — | — |
+| Review own competencies | ✅ | ✅ | ✅ | ✅ |
+| Self-evaluate | ✅ | ✅ | ✅ | ✅ |
+| Evaluate direct reports | — | — | ✅ | — |
+| Create development plan for a report (when supervisor eval < 60%) | — | — | ✅ | — |
+| Create quiz & assign to direct reports | — | — | ✅ | — |
+| Take assigned quiz | ✅ | ✅ | ✅ | ✅ |
+| View own development plan | ✅ | ✅ | ✅ | ✅ |
+| Individual report (self) | ✅ | ✅ | ✅ | ✅ |
+| Team report (own reports) | — | — | ✅ | — |
+| Org-wide / general reports | ✅ | ✅ | — | — |
 
-When the screen detects no admin exists and switches to register mode, initialize the form fields with demo values the user can still edit:
+**Supervisor is derived**, not assigned: anyone with ≥1 row in `profiles.supervisor_id = me` automatically gets supervisor capabilities. Admin/HR/Employee are explicit roles in `user_roles`.
 
-- Full name: `Demo Admin`
-- Email: `admin@demo.local`
-- Password: `admin123`
+## Changes
 
-A small helper line under the heading: "Demo values pre-filled — edit if you like, then click Create account."
+### 1. Database
+- Extend `app_role` enum: add `hr`. Keep `admin`, `employee`. (Supervisor stays derived.)
+- New tables (all with GRANT + RLS):
+  - `quizzes` (id, supervisor_id, title, description, created_at)
+  - `quiz_questions` (id, quiz_id, prompt, order_index)
+  - `quiz_choices` (id, question_id, text, is_correct, order_index)
+  - `quiz_assignments` (id, quiz_id, employee_id, assigned_at, status)
+  - `quiz_attempts` (id, assignment_id, score_pct, submitted_at)
+  - `quiz_answers` (id, attempt_id, question_id, choice_id)
+- Helper fn `public.is_hr(uuid)` mirroring `has_role`.
+- RLS:
+  - Job titles & competencies: admin OR hr can write; everyone authenticated can read.
+  - Profiles: admin OR hr can update `job_title_id` and `supervisor_id`; only admin can change roles via `user_roles`.
+  - Quizzes: supervisor owns; assigned employees can read their own assignment + submit attempts.
 
-No change to login mode.
+### 2. Server functions (`src/lib/admin.functions.ts` + new files)
+- `setUserRoles({ userId, roles[] })` — admin-only; replaces user's rows in `user_roles`.
+- `assignJobTitle`, `assignSupervisor` — admin or HR.
+- `createQuiz`, `assignQuiz`, `submitQuizAttempt` — supervisor/employee scoped.
+- `getIndividualReport(userId)`, `getTeamReport(supervisorId)`, `getOrgReport()` — role-gated.
 
-## 2. Relax password rules
+### 3. UI / routes
+- `src/lib/auth.ts`: expose `isAdmin`, `isHR`, `isSupervisor`, `isEmployee`.
+- `src/components/AppShell.tsx`: rebuild sidebar grouped by role:
+  - **Admin**: Employees, Roles, Job Titles, Competencies, Reports
+  - **HR**: Job Titles, Competencies, Employees (assign job title/supervisor only), Reports
+  - **Supervisor**: My Team, Evaluate, Development Plans, Quizzes, Team Report
+  - **Everyone**: Dashboard, My Competencies, My Evaluations, My Development Plan, My Quizzes, My Report
+- New routes:
+  - `/_authenticated/admin/roles.tsx` — list users, multi-select role chips (Admin / HR / Employee), save.
+  - `/_authenticated/hr/employees.tsx` — HR-scoped: assign job title & supervisor (no invite/role change).
+  - `/_authenticated/supervisor/quizzes.tsx` + `quizzes.new.tsx` + `quizzes.$id.assign.tsx`
+  - `/_authenticated/my-quizzes.tsx` + `my-quizzes.$assignmentId.tsx` (take quiz)
+  - `/_authenticated/my-competencies.tsx` (read-only list for current job title)
+  - `/_authenticated/reports/individual.tsx`, `reports/team.tsx`, `reports/org.tsx`
+- Update existing admin pages to also allow HR where appropriate (job titles, competencies).
 
-- `src/routes/auth.tsx` — no client-side length check (Supabase still enforces its own minimum).
-- `src/routes/_authenticated/change-password.tsx` — drop the 8-char gate to 6 chars so the demo password works on the forced change-password screen too.
-- Lower Supabase Auth minimum password length to 6 via `supabase--configure_auth` so `admin123` is accepted on sign-up.
+### 4. Reports (simple v1)
+- Individual: own evaluations over time, latest score per competency, dev plan progress, quiz scores.
+- Team: per-report status (last self %, last supervisor %, has dev plan, open dev plan items, quiz completion).
+- Org: counts of employees per job title, average scores per job title, employees below 60%.
 
-Note for the user: this is for testing; raise it again before going to production.
-
-## 3. "Seed demo data" button on the dashboard
-
-Add an admin-only card on `src/routes/_authenticated/dashboard.tsx` with a **Seed demo data** action. It calls a new authenticated server function `seedDemoData` in `src/lib/admin.functions.ts` that:
-
-- Verifies the caller has `admin` role (via `has_role` RPC) — refuses otherwise.
-- Is idempotent: checks for a marker job title (e.g. `Software Engineer (demo)`) and exits early if found.
-- Inserts:
-  - 3 job titles: `Software Engineer (demo)`, `Customer Support Rep (demo)`, `Sales Associate (demo)`
-  - 4–5 competencies per job title (e.g. for Engineer: Code Quality, Problem Solving, Collaboration, Delivery, Testing)
-  - 2 demo employees via Auth Admin API:
-    - `supervisor@demo.local` / `demo1234` — role employee, job title Software Engineer, no supervisor
-    - `report@demo.local` / `demo1234` — role employee, job title Software Engineer, supervisor = the first one (makes the first one a supervisor automatically since "supervisor" = has reports)
-  - Both with `must_change_password: false` so you can log straight in.
-
-Returns a summary `{ jobTitles, competencies, employees, credentials: [{email,password,role}] }` and the dashboard shows a toast + a small panel listing the demo credentials so the user can sign in as supervisor/employee to test the full evaluation → development-plan flow.
-
-The button shows "Already seeded" and is disabled after a successful run (detected by the early-exit response).
+## Out of scope (v1)
+- Quiz question types beyond single-choice multiple choice.
+- Email notifications for quiz assignment (toast only).
+- Export to PDF/CSV (on-screen tables + charts only).
 
 ## Technical notes
+- All new tables follow the GRANT → RLS → POLICY pattern; service_role gets ALL, authenticated gets the minimum needed.
+- Role checks in RLS use `has_role(auth.uid(), 'admin'|'hr')` + `is_supervisor_of(...)`.
+- "Supervisor" never lives in `user_roles`; UI derives it from `profiles.supervisor_id` count, same as today.
+- The first-admin bootstrap stays unchanged.
 
-- `seedDemoData` uses `requireSupabaseAuth` middleware, then dynamic-imports `@/integrations/supabase/client.server` inside the handler for `auth.admin.createUser` and bulk inserts (consistent with existing `inviteEmployee`).
-- All inserts use service role to bypass RLS for the seed; user-facing reads still go through normal RLS.
-- No schema migration needed — uses existing `job_titles`, `competencies`, `profiles`, `user_roles` tables.
-
-## Files touched
-
-- `src/routes/auth.tsx` — pre-fill state, helper text, drop length check
-- `src/routes/_authenticated/change-password.tsx` — lower min length to 6
-- `src/lib/admin.functions.ts` — add `seedDemoData`
-- `src/routes/_authenticated/dashboard.tsx` — admin-only seed card + credentials panel
-- Supabase auth config — min password length 6
-
-## Out of scope
-
-- Always-visible Sign in / Register toggle (not selected).
-- Removing the seed button automatically after demo (kept; idempotent server-side guard is enough).
+After you approve, I'll do it in two builds: (1) DB migration + role plumbing + sidebar, (2) quizzes + reports.
