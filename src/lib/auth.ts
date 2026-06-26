@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
-export type AppRole = "admin" | "employee";
+export type AppRole = "admin" | "hr" | "employee";
 
 export interface Profile {
   id: string;
@@ -19,7 +19,10 @@ export interface AuthState {
   profile: Profile | null;
   roles: AppRole[];
   isAdmin: boolean;
+  isHR: boolean;
   isSupervisor: boolean;
+  isEmployee: boolean;
+  primaryRoleLabel: string;
   refresh: () => Promise<void>;
 }
 
@@ -73,13 +76,25 @@ export function useAuth(): AuthState {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const isAdmin = roles.includes("admin");
+  const isHR = roles.includes("hr");
+  const isEmployee = roles.includes("employee") || (!isAdmin && !isHR);
+
+  let primaryRoleLabel = "Employee";
+  if (isAdmin) primaryRoleLabel = "Admin";
+  else if (isHR) primaryRoleLabel = "HR";
+  else if (isSupervisor) primaryRoleLabel = "Supervisor";
+
   return {
     loading,
     user,
     profile,
     roles,
-    isAdmin: roles.includes("admin"),
+    isAdmin,
+    isHR,
     isSupervisor,
+    isEmployee,
+    primaryRoleLabel,
     refresh,
   };
 }
