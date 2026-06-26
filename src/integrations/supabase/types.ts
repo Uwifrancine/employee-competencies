@@ -302,6 +302,236 @@ export type Database = {
           },
         ]
       }
+      quiz_answers: {
+        Row: {
+          attempt_id: string
+          choice_id: string | null
+          id: string
+          question_id: string
+        }
+        Insert: {
+          attempt_id: string
+          choice_id?: string | null
+          id?: string
+          question_id: string
+        }
+        Update: {
+          attempt_id?: string
+          choice_id?: string | null
+          id?: string
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_answers_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_answers_choice_id_fkey"
+            columns: ["choice_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_choices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          employee_id: string
+          id: string
+          quiz_id: string
+          status: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          employee_id: string
+          id?: string
+          quiz_id: string
+          status?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          employee_id?: string
+          id?: string
+          quiz_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_assignments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_assignments_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_attempts: {
+        Row: {
+          assignment_id: string
+          employee_id: string
+          id: string
+          score_pct: number
+          submitted_at: string
+        }
+        Insert: {
+          assignment_id: string
+          employee_id: string
+          id?: string
+          score_pct?: number
+          submitted_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          employee_id?: string
+          id?: string
+          score_pct?: number
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_attempts_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_attempts_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_choices: {
+        Row: {
+          id: string
+          is_correct: boolean
+          order_index: number
+          question_id: string
+          text: string
+        }
+        Insert: {
+          id?: string
+          is_correct?: boolean
+          order_index?: number
+          question_id: string
+          text: string
+        }
+        Update: {
+          id?: string
+          is_correct?: boolean
+          order_index?: number
+          question_id?: string
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_choices_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_questions: {
+        Row: {
+          created_at: string
+          id: string
+          order_index: number
+          prompt: string
+          quiz_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_index?: number
+          prompt: string
+          quiz_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_index?: number
+          prompt?: string
+          quiz_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_questions_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quizzes: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          supervisor_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          supervisor_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          supervisor_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quizzes_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -335,13 +565,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_hr: { Args: { _user_id: string }; Returns: boolean }
       is_supervisor_of: {
         Args: { _employee_id: string; _supervisor_id: string }
         Returns: boolean
       }
     }
     Enums: {
-      app_role: "admin" | "employee"
+      app_role: "admin" | "employee" | "hr"
       dev_plan_status: "open" | "in_progress" | "completed"
       evaluator_type: "self" | "supervisor"
     }
@@ -471,7 +702,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "employee"],
+      app_role: ["admin", "employee", "hr"],
       dev_plan_status: ["open", "in_progress", "completed"],
       evaluator_type: ["self", "supervisor"],
     },

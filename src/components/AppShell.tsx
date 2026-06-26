@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import {
@@ -12,11 +12,16 @@ import {
   Sprout,
   LogOut,
   Menu,
+  Shield,
+  BookOpen,
+  BarChart3,
+  HelpCircle,
+  GraduationCap,
 } from "lucide-react";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
-type NavItem = { to: string; label: string; icon: any; show: boolean };
+type NavItem = { to: string; label: string; icon: any };
+type NavSection = { label: string; items: NavItem[] };
 
 export function AppShell({ children }: { children: ReactNode }) {
   const auth = useAuth();
@@ -24,15 +29,55 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
 
-  const items: NavItem[] = [
-    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, show: true },
-    { to: "/evaluations", label: "My Evaluations", icon: ClipboardCheck, show: true },
-    { to: "/development-plans", label: "My Development Plans", icon: Sprout, show: true },
-    { to: "/supervisor", label: "My Team", icon: UserCheck, show: auth.isSupervisor },
-    { to: "/admin/employees", label: "Employees", icon: Users, show: auth.isAdmin },
-    { to: "/admin/job-titles", label: "Job Titles", icon: Briefcase, show: auth.isAdmin },
-    { to: "/admin/competencies", label: "Competencies", icon: Target, show: auth.isAdmin },
+  const sections: NavSection[] = [
+    {
+      label: "Me",
+      items: [
+        { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { to: "/my-competencies", label: "My Competencies", icon: BookOpen },
+        { to: "/evaluations", label: "My Evaluations", icon: ClipboardCheck },
+        { to: "/my-quizzes", label: "My Quizzes", icon: HelpCircle },
+        { to: "/development-plans", label: "My Development Plan", icon: Sprout },
+        { to: "/reports/individual", label: "My Report", icon: BarChart3 },
+      ],
+    },
   ];
+
+  if (auth.isSupervisor) {
+    sections.push({
+      label: "Supervisor",
+      items: [
+        { to: "/supervisor", label: "My Team", icon: UserCheck },
+        { to: "/supervisor/quizzes", label: "Quizzes", icon: GraduationCap },
+        { to: "/reports/team", label: "Team Report", icon: BarChart3 },
+      ],
+    });
+  }
+
+  if (auth.isHR) {
+    sections.push({
+      label: "HR",
+      items: [
+        { to: "/hr/employees", label: "Employees", icon: Users },
+        { to: "/admin/job-titles", label: "Job Titles", icon: Briefcase },
+        { to: "/admin/competencies", label: "Competencies", icon: Target },
+        { to: "/reports/org", label: "Org Report", icon: BarChart3 },
+      ],
+    });
+  }
+
+  if (auth.isAdmin) {
+    sections.push({
+      label: "Admin",
+      items: [
+        { to: "/admin/employees", label: "Employees", icon: Users },
+        { to: "/admin/roles", label: "Roles", icon: Shield },
+        { to: "/admin/job-titles", label: "Job Titles", icon: Briefcase },
+        { to: "/admin/competencies", label: "Competencies", icon: Target },
+        { to: "/reports/org", label: "Org Report", icon: BarChart3 },
+      ],
+    });
+  }
 
   const onLogout = async () => {
     await supabase.auth.signOut();
@@ -49,7 +94,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile top bar */}
       <div className="md:hidden flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground">
         <button onClick={() => setOpen((v) => !v)} className="p-1"><Menu className="size-5" /></button>
         <div className="font-semibold">Competency Manager</div>
@@ -57,31 +101,38 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       <div className="md:grid md:grid-cols-[260px_1fr]">
-        {/* Sidebar */}
         <aside className={`${open ? "block" : "hidden"} md:block bg-sidebar text-sidebar-foreground md:min-h-screen`}>
           <div className="hidden md:block p-6">
             <div className="text-lg font-bold">Competency Manager</div>
             <div className="text-xs text-sidebar-foreground/70 mt-1">{auth.profile?.full_name}</div>
+            <div className="text-[10px] uppercase tracking-wide text-accent mt-1">{auth.primaryRoleLabel}</div>
           </div>
-          <nav className="p-3 space-y-1">
-            {items.filter((i) => i.show).map((i) => {
-              const active = pathname === i.to || pathname.startsWith(i.to + "/");
-              return (
-                <Link
-                  key={i.to}
-                  to={i.to}
-                  onClick={() => setOpen(false)}
-                  className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm ${
-                    active
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                      : "hover:bg-sidebar-accent"
-                  }`}
-                >
-                  <i.icon className="size-4" />
-                  {i.label}
-                </Link>
-              );
-            })}
+          <nav className="p-3 space-y-4">
+            {sections.map((section) => (
+              <div key={section.label}>
+                <div className="px-3 pb-1 text-[10px] uppercase tracking-wide text-sidebar-foreground/60">{section.label}</div>
+                <div className="space-y-1">
+                  {section.items.map((i) => {
+                    const active = pathname === i.to || pathname.startsWith(i.to + "/");
+                    return (
+                      <Link
+                        key={i.to}
+                        to={i.to}
+                        onClick={() => setOpen(false)}
+                        className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm ${
+                          active
+                            ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                            : "hover:bg-sidebar-accent"
+                        }`}
+                      >
+                        <i.icon className="size-4" />
+                        {i.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
           <div className="hidden md:block p-3 mt-auto">
             <Button onClick={onLogout} variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent">
@@ -116,6 +167,7 @@ export function StatusBadge({ status }: { status: string }) {
     pass: "bg-success text-success-foreground",
     fail: "bg-destructive text-destructive-foreground",
     pending: "bg-warning text-warning-foreground",
+    submitted: "bg-success text-success-foreground",
   };
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${map[status] ?? "bg-muted text-muted-foreground"}`}>
