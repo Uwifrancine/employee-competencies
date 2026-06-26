@@ -34,9 +34,10 @@ function EmployeesPage() {
   const [open, setOpen] = useState(false);
   const [showCred, setShowCred] = useState<{ email: string; password: string; emailSent: boolean } | null>(null);
   const [form, setForm] = useState({
-    email: "", fullName: "", role: "employee" as "admin" | "employee",
+    email: "", fullName: "", role: "employee" as "admin" | "hr" | "employee",
     jobTitleId: "" as string, supervisorId: "" as string,
   });
+
 
   const load = async () => {
     const [{ data: p }, { data: r }, { data: jt }] = await Promise.all([
