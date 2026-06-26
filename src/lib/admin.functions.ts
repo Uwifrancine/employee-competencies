@@ -153,6 +153,48 @@ export const resetEmployeePassword = createServerFn({ method: "POST" })
     return { tempPassword };
   });
 
+export const setUserRoles = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        userId: z.string().uuid(),
+        roles: z.array(z.enum(["admin", "hr", "employee"])).min(1),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await ensureAdmin(supabaseAdmin, context.userId);
+
+    // Safety: never remove the last admin
+    if (!data.roles.includes("admin")) {
+      const { count } = await supabaseAdmin
+        .from("user_roles")
+        .select("user_id", { count: "exact", head: true })
+        .eq("role", "admin");
+      const { data: targetIsAdmin } = await supabaseAdmin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.userId)
+        .eq("role", "admin")
+        .maybeSingle();
+      if ((count ?? 0) <= 1 && targetIsAdmin) {
+        throw new Error("Cannot remove the last admin.");
+      }
+    }
+
+    const { error: delErr } = await supabaseAdmin.from("user_roles").delete().eq("user_id", data.userId);
+    if (delErr) throw new Error(delErr.message);
+
+    const rows = Array.from(new Set(data.roles)).map((r) => ({ user_id: data.userId, role: r }));
+    const { error: insErr } = await supabaseAdmin.from("user_roles").insert(rows);
+    if (insErr) throw new Error(insErr.message);
+
+    return { ok: true };
+  });
+
+
 export const seedDemoData = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
