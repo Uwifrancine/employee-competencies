@@ -115,8 +115,10 @@ function EmployeesPage() {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="employee">Employee</SelectItem>
+                      <SelectItem value="hr">HR</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
                     </SelectContent>
+
                   </Select>
                 </div>
                 <div>
