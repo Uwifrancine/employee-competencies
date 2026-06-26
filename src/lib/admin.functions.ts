@@ -30,12 +30,13 @@ export const inviteEmployee = createServerFn({ method: "POST" })
       .object({
         email: z.string().trim().email().max(255),
         fullName: z.string().trim().min(1).max(120),
-        role: z.enum(["admin", "employee"]).default("employee"),
+        role: z.enum(["admin", "hr", "employee"]).default("employee"),
         jobTitleId: z.string().uuid().nullable().optional(),
         supervisorId: z.string().uuid().nullable().optional(),
       })
       .parse(input),
   )
+
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await ensureAdmin(supabaseAdmin, context.userId);
