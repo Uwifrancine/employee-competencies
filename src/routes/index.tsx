@@ -3,9 +3,8 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 export const Route = createFileRoute("/")({
   ssr: false,
   beforeLoad: async () => {
-    const { supabase } = await import("@/integrations/supabase/client");
-    const { data } = await supabase.auth.getUser();
-    if (data.user) throw redirect({ to: "/dashboard" });
+    const token = localStorage.getItem("auth_token");
+    if (token) throw redirect({ to: "/dashboard" });
     throw redirect({ to: "/auth" });
   },
   component: () => null,

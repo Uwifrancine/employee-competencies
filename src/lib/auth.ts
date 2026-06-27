@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import type { User } from "@supabase/supabase-js";
+import { useEffect, useState, useCallback } from "react";
+import { api, getStoredUser, storeUser, clearToken, setToken, AuthUser } from "./api";
 
 export type AppRole = "admin" | "hr" | "employee";
 
@@ -15,7 +14,7 @@ export interface Profile {
 
 export interface AuthState {
   loading: boolean;
-  user: User | null;
+  user: AuthUser | null;
   profile: Profile | null;
   roles: AppRole[];
   isAdmin: boolean;
@@ -24,66 +23,80 @@ export interface AuthState {
   isEmployee: boolean;
   primaryRoleLabel: string;
   refresh: () => Promise<void>;
+  logout: () => void;
+}
+
+function toProfile(u: AuthUser): Profile {
+  return {
+    id: u.id,
+    email: u.email,
+    full_name: u.fullName,
+    job_title_id: u.jobTitle?.id ?? null,
+    supervisor_id: u.supervisor?.id ?? null,
+    must_change_password: u.mustChangePassword,
+  };
+}
+
+export async function loginWithCredentials(
+  email: string,
+  password: string
+): Promise<{ token: string; user: AuthUser }> {
+  const res = await api.post<{ token: string; user: AuthUser }>("/api/auth/login", {
+    email,
+    password,
+  });
+  setToken(res.token);
+  storeUser(res.user);
+  return res;
 }
 
 export function useAuth(): AuthState {
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [roles, setRoles] = useState<AppRole[]>([]);
-  const [isSupervisor, setIsSupervisor] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
 
-  const load = async (u: User | null) => {
-    setUser(u);
-    if (!u) {
-      setProfile(null);
-      setRoles([]);
-      setIsSupervisor(false);
+  const load = useCallback(async () => {
+    const stored = getStoredUser();
+    if (!stored) {
       setLoading(false);
       return;
     }
-    const [{ data: prof }, { data: roleRows }, { count: reports }] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", u.id).maybeSingle(),
-      supabase.from("user_roles").select("role").eq("user_id", u.id),
-      supabase.from("profiles").select("id", { count: "exact", head: true }).eq("supervisor_id", u.id),
-    ]);
-    setProfile(prof as Profile | null);
-    setRoles(((roleRows ?? []) as { role: AppRole }[]).map((r) => r.role));
-    setIsSupervisor((reports ?? 0) > 0);
-    setLoading(false);
-  };
-
-  const refresh = async () => {
-    const { data } = await supabase.auth.getUser();
-    await load(data.user ?? null);
-  };
-
-  useEffect(() => {
-    let active = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!active) return;
-      load(data.session?.user ?? null);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
-        load(session?.user ?? null);
-      }
-    });
-    return () => {
-      active = false;
-      sub.subscription.unsubscribe();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    try {
+      const fresh = await api.get<AuthUser>("/api/auth/me");
+      storeUser(fresh);
+      setUser(fresh);
+    } catch {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  const refresh = useCallback(async () => {
+    await load();
+  }, [load]);
+
+  const logout = useCallback(() => {
+    clearToken();
+    setUser(null);
+    window.location.href = "/auth";
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const roles = (user?.roles ?? []) as AppRole[];
   const isAdmin = roles.includes("admin");
   const isHR = roles.includes("hr");
   const isEmployee = roles.includes("employee") || (!isAdmin && !isHR);
 
+  const isSupervisor = (user?.subordinateCount ?? 0) > 0;
+
   let primaryRoleLabel = "Employee";
   if (isAdmin) primaryRoleLabel = "Admin";
   else if (isHR) primaryRoleLabel = "HR";
-  else if (isSupervisor) primaryRoleLabel = "Supervisor";
+
+  const profile = user ? toProfile(user) : null;
 
   return {
     loading,
@@ -96,5 +109,21 @@ export function useAuth(): AuthState {
     isEmployee,
     primaryRoleLabel,
     refresh,
+    logout,
   };
+}
+
+export function useIsSupervisor(): boolean {
+  const [is, setIs] = useState(false);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user) return;
+    api
+      .get<{ id: string }[]>("/api/employees?supervisorId=" + user.id)
+      .then((list) => setIs(Array.isArray(list) && list.length > 0))
+      .catch(() => setIs(false));
+  }, [user?.id]);
+
+  return is;
 }

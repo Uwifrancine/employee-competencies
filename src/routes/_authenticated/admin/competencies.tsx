@@ -1,12 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { PageHeader } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Trash2, Plus, Target } from "lucide-react";
@@ -17,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/admin/competencies")({
 });
 
 interface JT { id: string; name: string }
-interface Comp { id: string; name: string; description: string | null; job_title_id: string }
+interface Comp { id: string; name: string; description: string | null; jobTitleId: string }
 
 function CompetenciesPage() {
   const [jts, setJts] = useState<JT[]>([]);
@@ -27,8 +25,7 @@ function CompetenciesPage() {
   const [desc, setDesc] = useState("");
 
   useEffect(() => {
-    supabase.from("job_titles").select("id,name").order("name").then(({ data }) => {
-      const list = (data ?? []) as JT[];
+    api.get<JT[]>("/api/job-titles").then((list) => {
       setJts(list);
       if (list[0] && !selected) setSelected(list[0].id);
     });
@@ -36,30 +33,29 @@ function CompetenciesPage() {
 
   useEffect(() => {
     if (!selected) { setComps([]); return; }
-    supabase.from("competencies").select("*").eq("job_title_id", selected).order("name")
-      .then(({ data }) => setComps((data ?? []) as Comp[]));
+    api.get<Comp[]>(`/api/competencies?jobTitleId=${selected}`).then(setComps);
   }, [selected]);
 
-  const reload = async () => {
-    const { data } = await supabase.from("competencies").select("*").eq("job_title_id", selected).order("name");
-    setComps((data ?? []) as Comp[]);
-  };
+  const reload = () =>
+    api.get<Comp[]>(`/api/competencies?jobTitleId=${selected}`).then(setComps);
 
   const add = async () => {
     if (!selected) return toast.error("Pick a job title first");
     if (!name.trim()) return toast.error("Name required");
-    const { error } = await supabase.from("competencies").insert({
-      job_title_id: selected, name: name.trim(), description: desc.trim() || null,
-    });
-    if (error) return toast.error(error.message);
-    setName(""); setDesc(""); reload();
+    try {
+      await api.post("/api/competencies", {
+        jobTitleId: selected, name: name.trim(), description: desc.trim() || null,
+      });
+      setName(""); setDesc(""); reload();
+    } catch (e: any) { toast.error(e?.message); }
   };
 
   const remove = async (id: string) => {
     if (!confirm("Delete this competency?")) return;
-    const { error } = await supabase.from("competencies").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    reload();
+    try {
+      await api.delete(`/api/competencies/${id}`);
+      reload();
+    } catch (e: any) { toast.error(e?.message); }
   };
 
   return (

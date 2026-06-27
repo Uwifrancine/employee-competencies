@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/auth";
+import { api } from "@/lib/api";
 import { PageHeader } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,51 +15,57 @@ export const Route = createFileRoute("/_authenticated/supervisor/plan/new/$emplo
   component: NewPlan,
 });
 
-interface Item { action: string; due_date: string }
+interface ActionItem { action: string; dueDate: string }
 
 function NewPlan() {
   const { employeeId } = Route.useParams();
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [empName, setEmpName] = useState("");
   const [lastEvalId, setLastEvalId] = useState<string | null>(null);
   const [title, setTitle] = useState("Development plan");
   const [summary, setSummary] = useState("");
   const [targetDate, setTargetDate] = useState("");
-  const [items, setItems] = useState<Item[]>([{ action: "", due_date: "" }]);
+  const [items, setItems] = useState<ActionItem[]>([{ action: "", dueDate: "" }]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const { data: p } = await supabase.from("profiles").select("full_name").eq("id", employeeId).maybeSingle();
-      setEmpName((p as any)?.full_name ?? "");
-      const { data: ev } = await supabase.from("evaluations")
-        .select("id").eq("employee_id", employeeId).eq("evaluator_type", "supervisor")
-        .order("created_at", { ascending: false }).limit(1).maybeSingle();
-      setLastEvalId((ev as any)?.id ?? null);
+      const emp = await api.get<{ fullName: string }>(`/api/employees/${employeeId}`);
+      setEmpName(emp.fullName);
+
+      const evals = await api.get<any[]>("/api/evaluations");
+      const lastSup = evals
+        .filter((e) => e.employee?.id === employeeId && e.evaluatorType === "supervisor")
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+      setLastEvalId(lastSup?.id ?? null);
     })();
   }, [employeeId]);
 
   const submit = async () => {
-    if (!user) return;
     if (!title.trim()) return toast.error("Title required");
     const cleanItems = items.filter((i) => i.action.trim());
     setSaving(true);
-    const { data: plan, error } = await supabase.from("development_plans").insert({
-      employee_id: employeeId, supervisor_id: user.id,
-      evaluation_id: lastEvalId, title: title.trim(), summary: summary.trim() || null,
-      target_date: targetDate || null,
-    }).select("id").single();
-    if (error || !plan) { setSaving(false); return toast.error(error?.message ?? "Failed"); }
-    if (cleanItems.length) {
-      const { error: iErr } = await supabase.from("dev_plan_items").insert(
-        cleanItems.map((i) => ({ plan_id: plan.id, action: i.action, due_date: i.due_date || null }))
-      );
-      if (iErr) toast.error(iErr.message);
+    try {
+      const plan = await api.post<{ id: string }>("/api/development-plans", {
+        employeeId,
+        title: title.trim(),
+        summary: summary.trim() || undefined,
+        targetDate: targetDate ? new Date(targetDate).toISOString() : undefined,
+        evaluationId: lastEvalId ?? undefined,
+      });
+      for (const i of cleanItems) {
+        await api.post(`/api/development-plans/${plan.id}/items`, {
+          action: i.action,
+          dueDate: i.dueDate ? new Date(i.dueDate).toISOString() : undefined,
+        });
+      }
+      toast.success("Development plan created");
+      navigate({ to: "/supervisor" });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    toast.success("Development plan created");
-    navigate({ to: "/supervisor" });
   };
 
   return (
@@ -74,7 +79,7 @@ function NewPlan() {
         <div>
           <div className="flex items-center justify-between mb-2">
             <Label>Action items</Label>
-            <Button variant="outline" size="sm" onClick={() => setItems([...items, { action: "", due_date: "" }])}>
+            <Button variant="outline" size="sm" onClick={() => setItems([...items, { action: "", dueDate: "" }])}>
               <Plus className="size-4 mr-1" /> Add
             </Button>
           </div>
@@ -83,8 +88,8 @@ function NewPlan() {
               <div key={idx} className="grid grid-cols-[1fr_180px_auto] gap-2">
                 <Input value={it.action} placeholder="Action / task"
                   onChange={(e) => { const c = [...items]; c[idx].action = e.target.value; setItems(c); }} />
-                <Input type="date" value={it.due_date}
-                  onChange={(e) => { const c = [...items]; c[idx].due_date = e.target.value; setItems(c); }} />
+                <Input type="date" value={it.dueDate}
+                  onChange={(e) => { const c = [...items]; c[idx].dueDate = e.target.value; setItems(c); }} />
                 <button onClick={() => setItems(items.filter((_, i) => i !== idx))} className="text-destructive p-2"><Trash2 className="size-4" /></button>
               </div>
             ))}

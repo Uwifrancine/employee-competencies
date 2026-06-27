@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/auth";
+import { api } from "@/lib/api";
 import { PageHeader } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,11 +14,10 @@ export const Route = createFileRoute("/_authenticated/supervisor/evaluate/$emplo
 });
 
 interface Comp { id: string; name: string; description: string | null }
-interface Emp { id: string; full_name: string; job_title_id: string | null }
+interface Emp { id: string; fullName: string; jobTitle: { id: string; name: string } | null }
 
 function SupervisorEval() {
   const { employeeId } = Route.useParams();
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [emp, setEmp] = useState<Emp | null>(null);
   const [comps, setComps] = useState<Comp[]>([]);
@@ -30,49 +28,56 @@ function SupervisorEval() {
 
   useEffect(() => {
     (async () => {
-      const { data: e } = await supabase.from("profiles").select("id,full_name,job_title_id").eq("id", employeeId).maybeSingle();
-      if (!e) return;
-      setEmp(e as Emp);
-      if (!e.job_title_id) return;
-      const { data: cs } = await supabase.from("competencies").select("*").eq("job_title_id", e.job_title_id).order("name");
-      setComps((cs ?? []) as Comp[]);
-      // last self
-      const { data: last } = await supabase.from("evaluations")
-        .select("id").eq("employee_id", employeeId).eq("evaluator_type", "self")
-        .order("created_at", { ascending: false }).limit(1).maybeSingle();
-      if (last) {
-        const { data: sc } = await supabase.from("evaluation_scores").select("competency_id,score").eq("evaluation_id", last.id);
+      const e = await api.get<Emp>(`/api/employees/${employeeId}`);
+      setEmp(e);
+      if (!e.jobTitle) return;
+
+      const cs = await api.get<Comp[]>(`/api/competencies?jobTitleId=${e.jobTitle.id}`);
+      setComps(cs);
+
+      // Load last self-evaluation scores
+      const evals = await api.get<any[]>("/api/evaluations");
+      const lastSelf = evals
+        .filter((x) => x.employee?.id === employeeId && x.evaluatorType === "self")
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+
+      if (lastSelf) {
+        const full = await api.get<any>(`/api/evaluations/${lastSelf.id}`);
         const map: Record<string, number> = {};
-        for (const r of sc ?? []) map[(r as any).competency_id] = (r as any).score;
+        for (const s of full.scores ?? []) map[s.competency.id] = Math.round(s.score / 20);
         setSelfScores(map);
       }
     })();
   }, [employeeId]);
 
   const submit = async () => {
-    if (!user || !emp?.job_title_id) return;
+    if (!emp?.jobTitle) return;
     if (comps.some((c) => !scores[c.id])) return toast.error("Score every competency");
     setSaving(true);
-    const total = comps.reduce((s, c) => s + scores[c.id], 0);
-    const overall = (total / (comps.length * 5)) * 100;
-    const { data: ev, error } = await supabase.from("evaluations").insert({
-      employee_id: emp.id, evaluator_id: user.id, evaluator_type: "supervisor",
-      job_title_id: emp.job_title_id, overall_percent: overall, notes: notes || null,
-    }).select("id").single();
-    if (error || !ev) { setSaving(false); return toast.error(error?.message ?? "Failed"); }
-    const items = comps.map((c) => ({ evaluation_id: ev.id, competency_id: c.id, score: scores[c.id] }));
-    await supabase.from("evaluation_scores").insert(items);
-    setSaving(false);
-    toast.success(`Submitted. Overall: ${overall.toFixed(1)}%`);
-    if (overall < 60) navigate({ to: "/supervisor/plan/new/$employeeId", params: { employeeId } });
-    else navigate({ to: "/supervisor" });
+    try {
+      const scoreArr = comps.map((c) => ({ competencyId: c.id, score: scores[c.id] * 20 }));
+      const ev = await api.post<any>("/api/evaluations", {
+        employeeId: emp.id,
+        jobTitleId: emp.jobTitle.id,
+        evaluatorType: "supervisor",
+        notes: notes || undefined,
+        scores: scoreArr,
+      });
+      toast.success(`Submitted. Overall: ${ev.overallPercent.toFixed(1)}%`);
+      if (ev.overallPercent < 60) navigate({ to: "/supervisor/plan/new/$employeeId", params: { employeeId } });
+      else navigate({ to: "/supervisor" });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed");
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!emp) return <div className="text-muted-foreground">Loading…</div>;
 
   return (
     <div className="max-w-3xl">
-      <PageHeader title={`Evaluate: ${emp.full_name}`} subtitle="Score each competency 1–5. Self-eval scores are shown for reference." />
+      <PageHeader title={`Evaluate: ${emp.fullName}`} subtitle="Score each competency 1–5. Self-eval scores are shown for reference." />
       <Card><CardContent className="p-5 space-y-5">
         {comps.map((c) => (
           <div key={c.id}>

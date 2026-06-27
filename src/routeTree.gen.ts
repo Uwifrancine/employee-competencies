@@ -32,6 +32,7 @@ import { Route as AuthenticatedAdminEmployeesRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdminCompetenciesRouteImport } from './routes/_authenticated/admin/competencies'
 import { Route as AuthenticatedSupervisorQuizzesNewRouteImport } from './routes/_authenticated/supervisor/quizzes.new'
 import { Route as AuthenticatedSupervisorEvaluateEmployeeIdRouteImport } from './routes/_authenticated/supervisor/evaluate.$employeeId'
+import { Route as AuthenticatedSupervisorEmployeeEmployeeIdRouteImport } from './routes/_authenticated/supervisor/employee.$employeeId'
 import { Route as AuthenticatedSupervisorPlanNewEmployeeIdRouteImport } from './routes/_authenticated/supervisor/plan.new.$employeeId'
 
 const AuthRoute = AuthRouteImport.update({
@@ -163,6 +164,12 @@ const AuthenticatedSupervisorEvaluateEmployeeIdRoute =
     path: '/evaluate/$employeeId',
     getParentRoute: () => AuthenticatedSupervisorRoute,
   } as any)
+const AuthenticatedSupervisorEmployeeEmployeeIdRoute =
+  AuthenticatedSupervisorEmployeeEmployeeIdRouteImport.update({
+    id: '/employee/$employeeId',
+    path: '/employee/$employeeId',
+    getParentRoute: () => AuthenticatedSupervisorRoute,
+  } as any)
 const AuthenticatedSupervisorPlanNewEmployeeIdRoute =
   AuthenticatedSupervisorPlanNewEmployeeIdRouteImport.update({
     id: '/plan/new/$employeeId',
@@ -191,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/reports/org': typeof AuthenticatedReportsOrgRoute
   '/reports/team': typeof AuthenticatedReportsTeamRoute
   '/supervisor/quizzes': typeof AuthenticatedSupervisorQuizzesRouteWithChildren
+  '/supervisor/employee/$employeeId': typeof AuthenticatedSupervisorEmployeeEmployeeIdRoute
   '/supervisor/evaluate/$employeeId': typeof AuthenticatedSupervisorEvaluateEmployeeIdRoute
   '/supervisor/quizzes/new': typeof AuthenticatedSupervisorQuizzesNewRoute
   '/supervisor/plan/new/$employeeId': typeof AuthenticatedSupervisorPlanNewEmployeeIdRoute
@@ -216,6 +224,7 @@ export interface FileRoutesByTo {
   '/reports/org': typeof AuthenticatedReportsOrgRoute
   '/reports/team': typeof AuthenticatedReportsTeamRoute
   '/supervisor/quizzes': typeof AuthenticatedSupervisorQuizzesRouteWithChildren
+  '/supervisor/employee/$employeeId': typeof AuthenticatedSupervisorEmployeeEmployeeIdRoute
   '/supervisor/evaluate/$employeeId': typeof AuthenticatedSupervisorEvaluateEmployeeIdRoute
   '/supervisor/quizzes/new': typeof AuthenticatedSupervisorQuizzesNewRoute
   '/supervisor/plan/new/$employeeId': typeof AuthenticatedSupervisorPlanNewEmployeeIdRoute
@@ -243,6 +252,7 @@ export interface FileRoutesById {
   '/_authenticated/reports/org': typeof AuthenticatedReportsOrgRoute
   '/_authenticated/reports/team': typeof AuthenticatedReportsTeamRoute
   '/_authenticated/supervisor/quizzes': typeof AuthenticatedSupervisorQuizzesRouteWithChildren
+  '/_authenticated/supervisor/employee/$employeeId': typeof AuthenticatedSupervisorEmployeeEmployeeIdRoute
   '/_authenticated/supervisor/evaluate/$employeeId': typeof AuthenticatedSupervisorEvaluateEmployeeIdRoute
   '/_authenticated/supervisor/quizzes/new': typeof AuthenticatedSupervisorQuizzesNewRoute
   '/_authenticated/supervisor/plan/new/$employeeId': typeof AuthenticatedSupervisorPlanNewEmployeeIdRoute
@@ -270,6 +280,7 @@ export interface FileRouteTypes {
     | '/reports/org'
     | '/reports/team'
     | '/supervisor/quizzes'
+    | '/supervisor/employee/$employeeId'
     | '/supervisor/evaluate/$employeeId'
     | '/supervisor/quizzes/new'
     | '/supervisor/plan/new/$employeeId'
@@ -295,6 +306,7 @@ export interface FileRouteTypes {
     | '/reports/org'
     | '/reports/team'
     | '/supervisor/quizzes'
+    | '/supervisor/employee/$employeeId'
     | '/supervisor/evaluate/$employeeId'
     | '/supervisor/quizzes/new'
     | '/supervisor/plan/new/$employeeId'
@@ -321,6 +333,7 @@ export interface FileRouteTypes {
     | '/_authenticated/reports/org'
     | '/_authenticated/reports/team'
     | '/_authenticated/supervisor/quizzes'
+    | '/_authenticated/supervisor/employee/$employeeId'
     | '/_authenticated/supervisor/evaluate/$employeeId'
     | '/_authenticated/supervisor/quizzes/new'
     | '/_authenticated/supervisor/plan/new/$employeeId'
@@ -495,6 +508,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSupervisorEvaluateEmployeeIdRouteImport
       parentRoute: typeof AuthenticatedSupervisorRoute
     }
+    '/_authenticated/supervisor/employee/$employeeId': {
+      id: '/_authenticated/supervisor/employee/$employeeId'
+      path: '/employee/$employeeId'
+      fullPath: '/supervisor/employee/$employeeId'
+      preLoaderRoute: typeof AuthenticatedSupervisorEmployeeEmployeeIdRouteImport
+      parentRoute: typeof AuthenticatedSupervisorRoute
+    }
     '/_authenticated/supervisor/plan/new/$employeeId': {
       id: '/_authenticated/supervisor/plan/new/$employeeId'
       path: '/plan/new/$employeeId'
@@ -551,6 +571,7 @@ const AuthenticatedSupervisorQuizzesRouteWithChildren =
 
 interface AuthenticatedSupervisorRouteChildren {
   AuthenticatedSupervisorQuizzesRoute: typeof AuthenticatedSupervisorQuizzesRouteWithChildren
+  AuthenticatedSupervisorEmployeeEmployeeIdRoute: typeof AuthenticatedSupervisorEmployeeEmployeeIdRoute
   AuthenticatedSupervisorEvaluateEmployeeIdRoute: typeof AuthenticatedSupervisorEvaluateEmployeeIdRoute
   AuthenticatedSupervisorPlanNewEmployeeIdRoute: typeof AuthenticatedSupervisorPlanNewEmployeeIdRoute
 }
@@ -559,6 +580,8 @@ const AuthenticatedSupervisorRouteChildren: AuthenticatedSupervisorRouteChildren
   {
     AuthenticatedSupervisorQuizzesRoute:
       AuthenticatedSupervisorQuizzesRouteWithChildren,
+    AuthenticatedSupervisorEmployeeEmployeeIdRoute:
+      AuthenticatedSupervisorEmployeeEmployeeIdRoute,
     AuthenticatedSupervisorEvaluateEmployeeIdRoute:
       AuthenticatedSupervisorEvaluateEmployeeIdRoute,
     AuthenticatedSupervisorPlanNewEmployeeIdRoute:
@@ -617,3 +640,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

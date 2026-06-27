@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { PageHeader, StatusBadge } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,10 +13,12 @@ export const Route = createFileRoute("/_authenticated/supervisor")({
 });
 
 interface Report {
-  id: string; full_name: string; email: string; job_title_id: string | null;
-  lastSelf?: { id: string; overall_percent: number; created_at: string } | null;
-  lastSup?: { id: string; overall_percent: number; created_at: string } | null;
-  hasPlan?: boolean;
+  id: string; fullName: string; email: string;
+  jobTitle: { id: string; name: string } | null;
+  latestEvalScore: number | null;
+  latestEvalDate: string | null;
+  openDevPlans: number;
+  avgQuizScore: number | null;
 }
 
 function SupervisorPage() {
@@ -25,30 +27,15 @@ function SupervisorPage() {
 
   useEffect(() => {
     if (!user) return;
-    (async () => {
-      const { data: rs } = await supabase.from("profiles")
-        .select("id,full_name,email,job_title_id").eq("supervisor_id", user.id).order("full_name");
-      const list = (rs ?? []) as Report[];
-      for (const r of list) {
-        const { data: evals } = await supabase.from("evaluations")
-          .select("id,overall_percent,evaluator_type,created_at")
-          .eq("employee_id", r.id).order("created_at", { ascending: false });
-        r.lastSelf = (evals?.find((e) => e.evaluator_type === "self") as any) ?? null;
-        r.lastSup = (evals?.find((e) => e.evaluator_type === "supervisor") as any) ?? null;
-        const { count } = await supabase.from("development_plans")
-          .select("id", { count: "exact", head: true }).eq("employee_id", r.id);
-        r.hasPlan = (count ?? 0) > 0;
-      }
-      setReports([...list]);
-    })();
-  }, [user]);
+    api
+      .get<{ members: Report[] }>(`/api/reports/team/${user.id}`)
+      .then((res) => setReports(res.members))
+      .catch(() => {});
+  }, [user?.id]);
 
   const stateFor = (r: Report) => {
-    if (!r.lastSelf) return { label: "awaiting self-eval", tone: "pending" };
-    const selfFail = Number(r.lastSelf.overall_percent) < 60;
-    const supAfter = r.lastSup && r.lastSup.created_at > r.lastSelf.created_at;
-    if (selfFail && !supAfter) return { label: "needs supervisor eval", tone: "pending" };
-    if (selfFail && supAfter && Number(r.lastSup!.overall_percent) < 60 && !r.hasPlan) return { label: "needs dev plan", tone: "fail" };
+    if (r.latestEvalScore === null) return { label: "not yet evaluated", tone: "pending" };
+    if (r.latestEvalScore < 60) return { label: "needs improvement", tone: "fail" };
     return { label: "on track", tone: "pass" };
   };
 
@@ -58,30 +45,29 @@ function SupervisorPage() {
       <Card><CardContent className="p-0">
         <Table>
           <TableHeader><TableRow>
-            <TableHead>Employee</TableHead><TableHead>Last self</TableHead><TableHead>Last supervisor</TableHead>
+            <TableHead>Employee</TableHead><TableHead>Latest score</TableHead><TableHead>Open plans</TableHead>
             <TableHead>Status</TableHead><TableHead></TableHead>
           </TableRow></TableHeader>
           <TableBody>
             {reports.map((r) => {
               const s = stateFor(r);
-              const selfFail = r.lastSelf && Number(r.lastSelf.overall_percent) < 60;
-              const supAfter = r.lastSup && r.lastSelf && r.lastSup.created_at > r.lastSelf.created_at;
-              const supFail = supAfter && Number(r.lastSup!.overall_percent) < 60;
+              const belowTarget = r.latestEvalScore !== null && r.latestEvalScore < 60;
               return (
                 <TableRow key={r.id}>
-                  <TableCell className="font-medium">{r.full_name}<div className="text-xs text-muted-foreground">{r.email}</div></TableCell>
-                  <TableCell>{r.lastSelf ? `${Number(r.lastSelf.overall_percent).toFixed(1)}%` : "—"}</TableCell>
-                  <TableCell>{r.lastSup ? `${Number(r.lastSup.overall_percent).toFixed(1)}%` : "—"}</TableCell>
+                  <TableCell className="font-medium">{r.fullName}<div className="text-xs text-muted-foreground">{r.email}</div></TableCell>
+                  <TableCell>{r.latestEvalScore !== null ? `${r.latestEvalScore.toFixed(1)}%` : "—"}</TableCell>
+                  <TableCell>{r.openDevPlans}</TableCell>
                   <TableCell><StatusBadge status={s.tone} /></TableCell>
-                  <TableCell className="space-x-2">
-                    {selfFail && !supAfter && (
-                      <Link to="/supervisor/evaluate/$employeeId" params={{ employeeId: r.id }}>
-                        <Button size="sm" className="bg-accent text-accent-foreground">Evaluate</Button>
-                      </Link>
-                    )}
-                    {supFail && !r.hasPlan && (
+                  <TableCell className="space-x-1">
+                    <Link to="/supervisor/employee/$employeeId" params={{ employeeId: r.id }}>
+                      <Button size="sm" variant="outline">View</Button>
+                    </Link>
+                    <Link to="/supervisor/evaluate/$employeeId" params={{ employeeId: r.id }}>
+                      <Button size="sm" className="bg-accent text-accent-foreground">Evaluate</Button>
+                    </Link>
+                    {belowTarget && r.openDevPlans === 0 && (
                       <Link to="/supervisor/plan/new/$employeeId" params={{ employeeId: r.id }}>
-                        <Button size="sm" className="bg-accent text-accent-foreground">Create plan</Button>
+                        <Button size="sm" variant="outline">Create plan</Button>
                       </Link>
                     )}
                   </TableCell>

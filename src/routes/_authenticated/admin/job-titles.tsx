@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { PageHeader } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,24 +25,28 @@ function JobTitlesPage() {
   const [description, setDescription] = useState("");
 
   const load = async () => {
-    const { data } = await supabase.from("job_titles").select("*").order("name");
-    setRows((data ?? []) as JobTitle[]);
+    try {
+      const data = await api.get<JobTitle[]>("/api/job-titles");
+      setRows(data);
+    } catch (e: any) { toast.error(e?.message); }
   };
   useEffect(() => { load(); }, []);
 
   const create = async () => {
     if (!name.trim()) return toast.error("Name required");
-    const { error } = await supabase.from("job_titles").insert({ name: name.trim(), description: description.trim() || null });
-    if (error) return toast.error(error.message);
-    toast.success("Job title created");
-    setName(""); setDescription(""); setOpen(false); load();
+    try {
+      await api.post("/api/job-titles", { name: name.trim(), description: description.trim() || null });
+      toast.success("Job title created");
+      setName(""); setDescription(""); setOpen(false); load();
+    } catch (e: any) { toast.error(e?.message); }
   };
 
   const remove = async (id: string) => {
     if (!confirm("Delete this job title? Associated competencies will also be removed.")) return;
-    const { error } = await supabase.from("job_titles").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    load();
+    try {
+      await api.delete(`/api/job-titles/${id}`);
+      load();
+    } catch (e: any) { toast.error(e?.message); }
   };
 
   return (

@@ -1,8 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { getAdminSetupStatus, signUpFirstAdmin } from "@/lib/admin.functions";
-import { useServerFn } from "@tanstack/react-start";
+import { api, setToken, storeUser } from "@/lib/api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,59 +13,58 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const signUp = useServerFn(signUpFirstAdmin);
-  const getSetupStatus = useServerFn(getAdminSetupStatus);
-  const [mode, setMode] = useState<"login" | "register">("login");
   const [hasAdmin, setHasAdmin] = useState<boolean | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    getSetupStatus()
-      .then(({ hasAdmin: exists }) => {
-        setHasAdmin(exists);
-        if (exists) {
-          setMode("login");
-          return;
-        }
-        setMode("register");
-        setFullName("Demo Admin");
-        setEmail("admin@demo.local");
-        setPassword("admin123");
-      })
-      .catch(() => {
-        setHasAdmin(true);
-        setMode("login");
-      });
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: "/dashboard" });
-    });
-  }, [getSetupStatus, navigate]);
+    // Redirect if already logged in
+    if (localStorage.getItem("auth_token")) {
+      window.location.href = "/dashboard";
+      return;
+    }
+
+    // Check if a first admin needs to be seeded
+    api
+      .get<{ count: number }>("/api/auth/check-admin")
+      .then(({ count }) => setHasAdmin(count > 0))
+      .catch(() => setHasAdmin(true));
+  }, [navigate]);
 
   const onLogin = async () => {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) return toast.error(error.message);
-    navigate({ to: "/dashboard" });
+    try {
+      const res = await api.post<{ token: string; user: any }>("/api/auth/login", {
+        email,
+        password,
+      });
+      setToken(res.token);
+      storeUser(res.user);
+      window.location.href = "/dashboard";
+    } catch (e: any) {
+      toast.error(e?.message ?? "Login failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const onRegister = async () => {
+  const onSeedAdmin = async () => {
     setLoading(true);
     try {
-      await signUp({ data: { email, password, fullName } });
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      toast.success("Welcome! You are the first admin.");
-      navigate({ to: "/dashboard" });
+      const res = await api.post<{ token?: string; user?: any }>("/api/auth/seed-admin");
+      // After seeding, log in automatically with the temp credentials
+      const loginRes = await api.post<{ token: string; user: any }>("/api/auth/login", {
+        email: "admin@company.com",
+        password: "Admin@1234",
+      });
+      setToken(loginRes.token);
+      storeUser(loginRes.user);
+      toast.success("Admin account created — please change your password.");
+      navigate({ to: "/change-password" });
     } catch (e: any) {
-      if (e?.message?.includes("admin already exists")) {
-        setHasAdmin(true);
-        setMode("login");
-      }
-      toast.error(e?.message ?? "Could not register");
+      toast.error(e?.message ?? "Setup failed");
+      setHasAdmin(true);
     } finally {
       setLoading(false);
     }
@@ -90,52 +87,63 @@ function AuthPage() {
 
       <div className="flex items-center justify-center p-6">
         <div className="w-full max-w-md space-y-6">
-          <div>
-            <h2 className="text-2xl font-bold">
-              {mode === "login" ? "Sign in" : hasAdmin ? "Register" : "Create the first admin"}
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              {mode === "login"
-                ? "Use the credentials provided by your admin."
-                : hasAdmin
-                  ? "This account will own the workspace."
-                  : "Demo values pre-filled — edit if you like, then click Create account."}
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            {mode === "register" && (
+          {hasAdmin === false ? (
+            <>
               <div>
-                <Label>Full name</Label>
-                <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jane Doe" />
+                <h2 className="text-2xl font-bold">Create the first admin</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  No accounts exist yet. Click below to bootstrap the admin account.
+                </p>
               </div>
-            )}
-            <div>
-              <Label>Email</Label>
-              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" />
-            </div>
-            <div>
-              <Label>Password</Label>
-              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-            </div>
-          </div>
-
-          <Button
-            disabled={loading}
-            onClick={mode === "login" ? onLogin : onRegister}
-            className="w-full bg-accent text-accent-foreground hover:opacity-90"
-          >
-            {loading ? "Please wait..." : mode === "login" ? "Sign in" : "Create account"}
-          </Button>
-
-          {hasAdmin && (
-            <button
-              type="button"
-              className="w-full text-sm text-muted-foreground hover:text-primary"
-              onClick={() => setMode(mode === "login" ? "register" : "login")}
-            >
-              {mode === "login" ? "Admin access is invite-only" : "Have an account? Sign in"}
-            </button>
+              <div className="rounded-md border border-border bg-muted/40 p-4 text-sm space-y-1">
+                <div><span className="font-medium">Email:</span> admin@company.com</div>
+                <div><span className="font-medium">Password:</span> Admin@1234 (must change)</div>
+              </div>
+              <Button
+                disabled={loading}
+                onClick={onSeedAdmin}
+                className="w-full bg-accent text-accent-foreground hover:opacity-90"
+              >
+                {loading ? "Setting up…" : "Create admin account"}
+              </Button>
+            </>
+          ) : (
+            <>
+              <div>
+                <h2 className="text-2xl font-bold">Sign in</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Use the credentials provided by your admin.
+                </p>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@company.com"
+                    onKeyDown={(e) => e.key === "Enter" && onLogin()}
+                  />
+                </div>
+                <div>
+                  <Label>Password</Label>
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && onLogin()}
+                  />
+                </div>
+              </div>
+              <Button
+                disabled={loading}
+                onClick={onLogin}
+                className="w-full bg-accent text-accent-foreground hover:opacity-90"
+              >
+                {loading ? "Signing in…" : "Sign in"}
+              </Button>
+            </>
           )}
         </div>
       </div>

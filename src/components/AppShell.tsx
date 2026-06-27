@@ -1,6 +1,6 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { ReactNode, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { clearToken } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
   LayoutDashboard,
@@ -79,8 +79,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     });
   }
 
-  const onLogout = async () => {
-    await supabase.auth.signOut();
+  const onLogout = () => {
+    clearToken();
     navigate({ to: "/auth", replace: true });
   };
 

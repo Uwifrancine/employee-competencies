@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { PageHeader } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,12 +24,12 @@ function MyCompetencies() {
     if (!profile) return;
     (async () => {
       if (!profile.job_title_id) { setLoaded(true); return; }
-      const [{ data: jt }, { data: c }] = await Promise.all([
-        supabase.from("job_titles").select("name").eq("id", profile.job_title_id).maybeSingle(),
-        supabase.from("competencies").select("id,name,description").eq("job_title_id", profile.job_title_id).order("name"),
+      const [jt, cs] = await Promise.all([
+        api.get<{ id: string; name: string; competencies: Comp[] }>(`/api/job-titles/${profile.job_title_id}`),
+        api.get<Comp[]>(`/api/competencies?jobTitleId=${profile.job_title_id}`),
       ]);
-      setJobTitleName((jt as any)?.name ?? null);
-      setComps((c ?? []) as Comp[]);
+      setJobTitleName(jt.name);
+      setComps(cs);
       setLoaded(true);
     })();
   }, [profile]);

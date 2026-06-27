@@ -1,8 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useServerFn } from "@tanstack/react-start";
-import { setUserRoles } from "@/lib/admin.functions";
+import { api } from "@/lib/api";
 import { PageHeader } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/admin/roles")({
 });
 
 type Role = "admin" | "hr" | "employee";
-interface Row { id: string; full_name: string; email: string; roles: Role[] }
+interface Row { id: string; fullName: string; email: string; roles: { role: Role }[] }
 
 const ALL_ROLES: Role[] = ["admin", "hr", "employee"];
 
@@ -25,27 +23,13 @@ function RolesPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [pending, setPending] = useState<Record<string, Role[]>>({});
   const [saving, setSaving] = useState<string | null>(null);
-  const save = useServerFn(setUserRoles);
 
   const load = async () => {
-    const [{ data: profs }, { data: roleRows }] = await Promise.all([
-      supabase.from("profiles").select("id,full_name,email").order("full_name"),
-      supabase.from("user_roles").select("user_id,role"),
-    ]);
-    const map = new Map<string, Role[]>();
-    for (const r of (roleRows ?? []) as { user_id: string; role: Role }[]) {
-      const list = map.get(r.user_id) ?? [];
-      list.push(r.role);
-      map.set(r.user_id, list);
-    }
-    const built: Row[] = ((profs ?? []) as any[]).map((p) => ({
-      id: p.id,
-      full_name: p.full_name,
-      email: p.email,
-      roles: map.get(p.id) ?? ["employee"],
-    }));
-    setRows(built);
-    setPending(Object.fromEntries(built.map((r) => [r.id, [...r.roles]])));
+    const data = await api.get<Row[]>("/api/employees");
+    setRows(data);
+    setPending(
+      Object.fromEntries(data.map((r) => [r.id, r.roles.map((x) => x.role)]))
+    );
   };
   useEffect(() => { load(); }, []);
 
@@ -62,7 +46,7 @@ function RolesPage() {
     if (next.length === 0) return toast.error("Pick at least one role");
     setSaving(uid);
     try {
-      await save({ data: { userId: uid, roles: next } });
+      await api.put(`/api/employees/${uid}`, { roles: next });
       toast.success("Roles updated");
       load();
     } catch (e: any) {
@@ -93,12 +77,13 @@ function RolesPage() {
             </TableHeader>
             <TableBody>
               {rows.map((row) => {
+                const currentRoles = row.roles.map((x) => x.role);
                 const sel = new Set(pending[row.id] ?? []);
-                const dirty = JSON.stringify([...sel].sort()) !== JSON.stringify([...row.roles].sort());
+                const dirty = JSON.stringify([...sel].sort()) !== JSON.stringify([...currentRoles].sort());
                 return (
                   <TableRow key={row.id}>
                     <TableCell className="font-medium flex items-center gap-2">
-                      <Shield className="size-4 text-muted-foreground" /> {row.full_name}
+                      <Shield className="size-4 text-muted-foreground" /> {row.fullName}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{row.email}</TableCell>
                     {ALL_ROLES.map((r) => (

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { PageHeader } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,35 +12,34 @@ export const Route = createFileRoute("/_authenticated/hr/employees")({
   component: HrEmployeesPage,
 });
 
-interface Row {
-  id: string; full_name: string; email: string;
-  job_title_id: string | null; supervisor_id: string | null;
+interface Employee {
+  id: string; fullName: string; email: string;
+  jobTitle: { id: string; name: string } | null;
+  supervisor: { id: string; fullName: string } | null;
 }
 interface JT { id: string; name: string }
 
 function HrEmployeesPage() {
-  const [rows, setRows] = useState<Row[]>([]);
+  const [rows, setRows] = useState<Employee[]>([]);
   const [jobTitles, setJobTitles] = useState<JT[]>([]);
 
   const load = async () => {
-    const [{ data: p }, { data: jt }] = await Promise.all([
-      supabase.from("profiles").select("id,full_name,email,job_title_id,supervisor_id").order("full_name"),
-      supabase.from("job_titles").select("id,name").order("name"),
+    const [emps, jts] = await Promise.all([
+      api.get<Employee[]>("/api/employees"),
+      api.get<JT[]>("/api/job-titles"),
     ]);
-    setRows((p ?? []) as Row[]);
-    setJobTitles((jt ?? []) as JT[]);
+    setRows(emps);
+    setJobTitles(jts);
   };
   useEffect(() => { load(); }, []);
 
-  const update = async (id: string, field: "job_title_id" | "supervisor_id", value: string | null) => {
-    const { error } = await supabase.from("profiles").update({ [field]: value } as any).eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Updated");
-    load();
+  const update = async (id: string, field: "jobTitleId" | "supervisorId", value: string | null) => {
+    try {
+      await api.put(`/api/employees/${id}`, { [field]: value });
+      toast.success("Updated");
+      load();
+    } catch (e: any) { toast.error(e?.message); }
   };
-
-  const jtName = (id: string | null) => jobTitles.find((j) => j.id === id)?.name ?? "—";
-  const supName = (id: string | null) => rows.find((r) => r.id === id)?.full_name ?? "—";
 
   return (
     <div>
@@ -57,11 +56,11 @@ function HrEmployeesPage() {
           <TableBody>
             {rows.map((r) => (
               <TableRow key={r.id}>
-                <TableCell className="font-medium">{r.full_name}</TableCell>
+                <TableCell className="font-medium">{r.fullName}</TableCell>
                 <TableCell className="text-muted-foreground">{r.email}</TableCell>
                 <TableCell>
-                  <Select value={r.job_title_id ?? "none"} onValueChange={(v) => update(r.id, "job_title_id", v === "none" ? null : v)}>
-                    <SelectTrigger className="h-8 w-[200px]"><SelectValue>{jtName(r.job_title_id)}</SelectValue></SelectTrigger>
+                  <Select value={r.jobTitle?.id ?? "none"} onValueChange={(v) => update(r.id, "jobTitleId", v === "none" ? null : v)}>
+                    <SelectTrigger className="h-8 w-[200px]"><SelectValue>{r.jobTitle?.name ?? "—"}</SelectValue></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">— none —</SelectItem>
                       {jobTitles.map((j) => <SelectItem key={j.id} value={j.id}>{j.name}</SelectItem>)}
@@ -69,11 +68,11 @@ function HrEmployeesPage() {
                   </Select>
                 </TableCell>
                 <TableCell>
-                  <Select value={r.supervisor_id ?? "none"} onValueChange={(v) => update(r.id, "supervisor_id", v === "none" ? null : v)}>
-                    <SelectTrigger className="h-8 w-[200px]"><SelectValue>{supName(r.supervisor_id)}</SelectValue></SelectTrigger>
+                  <Select value={r.supervisor?.id ?? "none"} onValueChange={(v) => update(r.id, "supervisorId", v === "none" ? null : v)}>
+                    <SelectTrigger className="h-8 w-[200px]"><SelectValue>{r.supervisor?.fullName ?? "—"}</SelectValue></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">— none —</SelectItem>
-                      {rows.filter((s) => s.id !== r.id).map((s) => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
+                      {rows.filter((s) => s.id !== r.id).map((s) => <SelectItem key={s.id} value={s.id}>{s.fullName}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </TableCell>

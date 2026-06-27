@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { PageHeader } from "@/components/AppShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -10,105 +10,60 @@ export const Route = createFileRoute("/_authenticated/reports/org")({
 });
 
 function OrgReport() {
-  const [stats, setStats] = useState({
-    employees: 0, jobTitles: 0, competencies: 0,
-    evalsTotal: 0, evalsBelow60: 0, plansOpen: 0, quizzesAssigned: 0, quizzesCompleted: 0,
-    avgSelf: 0, avgSup: 0,
-  });
-  const [byJob, setByJob] = useState<{ name: string; count: number }[]>([]);
+  const [data, setData] = useState<any>(null);
 
   useEffect(() => {
-    (async () => {
-      const [{ count: employees }, { count: jobTitles }, { count: competencies },
-        { data: evals }, { count: plansOpen },
-        { count: quizzesAssigned }, { count: quizzesCompleted },
-        { data: jts }] = await Promise.all([
-          supabase.from("profiles").select("id", { count: "exact", head: true }),
-          supabase.from("job_titles").select("id", { count: "exact", head: true }),
-          supabase.from("competencies").select("id", { count: "exact", head: true }),
-          supabase.from("evaluations").select("evaluator_type,overall_percent"),
-          supabase.from("development_plans").select("id", { count: "exact", head: true }).neq("status", "completed"),
-          supabase.from("quiz_assignments").select("id", { count: "exact", head: true }),
-          supabase.from("quiz_assignments").select("id", { count: "exact", head: true }).eq("status", "completed"),
-          supabase.from("job_titles").select("id,name"),
-        ]);
-      const selfs = (evals ?? []).filter((e: any) => e.evaluator_type === "self").map((e: any) => Number(e.overall_percent));
-      const sups = (evals ?? []).filter((e: any) => e.evaluator_type === "supervisor").map((e: any) => Number(e.overall_percent));
-      const below = (evals ?? []).filter((e: any) => Number(e.overall_percent) < 60).length;
-
-      setStats({
-        employees: employees ?? 0, jobTitles: jobTitles ?? 0, competencies: competencies ?? 0,
-        evalsTotal: (evals ?? []).length, evalsBelow60: below,
-        plansOpen: plansOpen ?? 0,
-        quizzesAssigned: quizzesAssigned ?? 0, quizzesCompleted: quizzesCompleted ?? 0,
-        avgSelf: selfs.length ? selfs.reduce((a, b) => a + b, 0) / selfs.length : 0,
-        avgSup: sups.length ? sups.reduce((a, b) => a + b, 0) / sups.length : 0,
-      });
-
-      const dist: { name: string; count: number }[] = [];
-      for (const j of (jts ?? []) as any[]) {
-        const { count } = await supabase.from("profiles").select("id", { count: "exact", head: true }).eq("job_title_id", j.id);
-        dist.push({ name: j.name, count: count ?? 0 });
-      }
-      setByJob(dist);
-    })();
+    api.get<any>("/api/reports/org").then(setData).catch(() => {});
   }, []);
+
+  if (!data) return <div className="text-muted-foreground">Loading…</div>;
+
+  const plans = data.developmentPlansByStatus ?? {};
 
   return (
     <div>
       <PageHeader title="Org Report" subtitle="Organization-wide performance snapshot." />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile label="Employees" value={stats.employees} />
-        <Tile label="Job titles" value={stats.jobTitles} />
-        <Tile label="Competencies" value={stats.competencies} />
-        <Tile label="Open dev plans" value={stats.plansOpen} tone="warn" />
-        <Tile label="Evaluations" value={stats.evalsTotal} />
-        <Tile label="Evals below 60%" value={stats.evalsBelow60} tone="danger" />
-        <Tile label="Quizzes assigned" value={stats.quizzesAssigned} />
-        <Tile label="Quizzes completed" value={stats.quizzesCompleted} tone="ok" />
+        <Tile label="Employees" value={data.totalEmployees ?? 0} />
+        <Tile label="Evaluations" value={data.totalEvaluations ?? 0} />
+        <Tile label="Open dev plans" value={(plans.open ?? 0) + (plans.in_progress ?? 0)} tone="warn" />
+        <Tile label="Quizzes taken" value={data.quizAttempts ?? 0} />
+        <Tile label="Avg eval score" value={data.averageScore ?? 0} pct />
+        <Tile label="Avg quiz score" value={data.averageQuizScore ?? 0} pct />
+        <Tile label="Completed plans" value={plans.completed ?? 0} tone="ok" />
       </div>
-      <div className="grid gap-4 md:grid-cols-2 mt-6">
-        <Card>
-          <CardHeader><CardTitle>Average scores</CardTitle></CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <Row label="Avg self-evaluation" value={stats.avgSelf} />
-            <Row label="Avg supervisor evaluation" value={stats.avgSup} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle>Headcount by job title</CardTitle></CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            {byJob.length === 0 && <div className="text-muted-foreground">No job titles.</div>}
-            {byJob.map((b) => (
-              <div key={b.name} className="flex justify-between border-b border-border last:border-0 py-2">
-                <div>{b.name}</div><div className="font-semibold">{b.count}</div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+
+      {(data.topCompetencies ?? []).length > 0 && (
+        <div className="mt-6">
+          <Card>
+            <CardHeader><CardTitle>Top competencies by score</CardTitle></CardHeader>
+            <CardContent className="text-sm space-y-2">
+              {data.topCompetencies.map((c: any) => (
+                <div key={c.competencyId} className="flex justify-between border-b border-border last:border-0 py-2">
+                  <div>{c.name}</div>
+                  <div className={`font-semibold ${c.avgScore >= 60 ? "text-success" : "text-destructive"}`}>
+                    {c.avgScore?.toFixed(0) ?? "—"}%
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
 
-function Tile({ label, value, tone }: { label: string; value: number; tone?: "ok" | "warn" | "danger" }) {
-  const color = tone === "ok" ? "text-success" : tone === "warn" ? "text-warning-foreground" : tone === "danger" ? "text-destructive" : "";
+function Tile({ label, value, tone, pct }: { label: string; value: number; tone?: "ok" | "warn"; pct?: boolean }) {
+  const color = tone === "ok" ? "text-success" : tone === "warn" ? "text-warning-foreground" : "";
   return (
     <Card>
       <CardContent className="p-5">
         <div className="text-sm text-muted-foreground">{label}</div>
-        <div className={`text-3xl font-bold mt-1 ${color}`}>{value}</div>
+        <div className={`text-3xl font-bold mt-1 ${color}`}>
+          {value === 0 ? "—" : pct ? `${value.toFixed(0)}%` : value}
+        </div>
       </CardContent>
     </Card>
-  );
-}
-function Row({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex justify-between border-b border-border last:border-0 py-2">
-      <div>{label}</div>
-      <div className={`font-semibold ${value === 0 ? "text-muted-foreground" : value >= 60 ? "text-success" : "text-destructive"}`}>
-        {value === 0 ? "—" : `${value.toFixed(0)}%`}
-      </div>
-    </div>
   );
 }
