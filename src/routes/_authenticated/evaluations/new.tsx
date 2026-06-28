@@ -37,10 +37,10 @@ function NewEval() {
   }, [profile?.job_title_id]);
 
   const setScore = (id: string, v: number) =>
-    setScores((s) => ({ ...s, [id]: { ...s[id], score: v } }));
+    setScores((s) => ({ ...s, [id]: { comment: s[id]?.comment ?? "", score: v } }));
 
   const setComment = (id: string, v: string) =>
-    setScores((s) => ({ ...s, [id]: { ...s[id], comment: v } }));
+    setScores((s) => ({ ...s, [id]: { score: s[id]?.score ?? null, comment: v } }));
 
   const submit = async () => {
     if (!profile?.job_title_id) return;
@@ -59,8 +59,8 @@ function NewEval() {
         evaluatorType: "self",
         scores: scoreArr,
       });
-      toast.success("Self-evaluation submitted! Your quizzes are ready below.");
-      window.location.href = "/my-quizzes";
+      toast.success("Self-evaluation submitted!");
+      window.location.href = "/evaluations";
     } catch (e: any) {
       toast.error(e?.message ?? "Failed");
     } finally {
@@ -115,11 +115,12 @@ function NewEval() {
                     {[1, 2, 3, 4, 5].map((v) => (
                       <button
                         key={v}
+                        type="button"
                         onClick={() => setScore(c.id, v)}
-                        className={`flex-1 h-10 rounded-md border text-sm font-medium transition-colors ${
+                        className={`flex-1 h-10 rounded-md border text-sm font-semibold transition-colors ${
                           s.score === v
-                            ? "bg-accent text-accent-foreground border-accent"
-                            : "border-border hover:border-accent"
+                            ? "bg-accent text-accent-foreground border-accent ring-2 ring-accent"
+                            : "bg-muted border-border hover:border-accent hover:bg-accent/10"
                         }`}
                       >
                         {v}

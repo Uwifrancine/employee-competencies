@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { PageHeader } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +19,7 @@ export const Route = createFileRoute("/_authenticated/supervisor/quizzes/new")({
 type QuestionType = "multipleChoice" | "checkbox" | "select";
 interface Choice { text: string; isCorrect: boolean }
 interface Question { prompt: string; questionType: QuestionType; choices: Choice[] }
+interface Competency { id: string; name: string; jobTitle: { id: string; name: string } }
 
 const TYPE_LABELS: Record<QuestionType, string> = {
   multipleChoice: "Multiple choice (one answer)",
@@ -38,11 +39,19 @@ function makeEmptyQuestion(): Question {
 }
 
 function NewQuiz() {
-  const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [competencyId, setCompetencyId] = useState<string>("");
+  const [competencies, setCompetencies] = useState<Competency[]>([]);
   const [questions, setQuestions] = useState<Question[]>([makeEmptyQuestion()]);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api
+      .get<Competency[]>("/api/competencies")
+      .then(setCompetencies)
+      .catch(() => {});
+  }, []);
 
   const updateQ = (qi: number, patch: Partial<Question>) =>
     setQuestions((qs) => qs.map((q, i) => (i === qi ? { ...q, ...patch } : q)));
@@ -51,7 +60,6 @@ function NewQuiz() {
     setQuestions((qs) =>
       qs.map((q, i) => {
         if (i !== qi) return q;
-        // Reset isCorrect when switching away from checkbox (only one can be correct)
         const choices =
           type === "checkbox"
             ? q.choices
@@ -91,13 +99,11 @@ function NewQuiz() {
       qs.map((q, i) => {
         if (i !== qi) return q;
         if (q.questionType === "checkbox") {
-          // Toggle independently
           return {
             ...q,
             choices: q.choices.map((c, x) => (x === ci ? { ...c, isCorrect: !c.isCorrect } : c)),
           };
         }
-        // radio / select: single correct
         return {
           ...q,
           choices: q.choices.map((c, x) => ({ ...c, isCorrect: x === ci })),
@@ -118,6 +124,7 @@ function NewQuiz() {
       const quiz = await api.post<{ id: string }>("/api/quizzes", {
         title: title.trim(),
         description: description.trim() || undefined,
+        competencyId: competencyId || undefined,
       });
 
       for (let qi = 0; qi < questions.length; qi++) {
@@ -135,7 +142,7 @@ function NewQuiz() {
       }
 
       toast.success("Quiz created");
-      navigate({ to: "/supervisor/quizzes" });
+      window.location.href = "/supervisor/quizzes";
     } catch (e: any) {
       toast.error(e?.message ?? "Failed");
     } finally {
@@ -158,6 +165,33 @@ function NewQuiz() {
               <Label>Description (optional)</Label>
               <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is this quiz about?" />
             </div>
+            <div>
+              <Label>Competency (optional)</Label>
+              <Select value={competencyId} onValueChange={setCompetencyId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Link to a competency…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {competencies.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
+                      {c.jobTitle && (
+                        <span className="text-muted-foreground ml-1 text-xs">— {c.jobTitle.name}</span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {competencyId && (
+                <button
+                  type="button"
+                  onClick={() => setCompetencyId("")}
+                  className="text-xs text-muted-foreground underline mt-1"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -174,14 +208,12 @@ function NewQuiz() {
                 )}
               </div>
 
-              {/* Prompt */}
               <Input
                 value={q.prompt}
                 placeholder="Question prompt…"
                 onChange={(e) => updateQ(qi, { prompt: e.target.value })}
               />
 
-              {/* Question type */}
               <div>
                 <Label className="text-xs text-muted-foreground mb-1 block">Question type</Label>
                 <Select value={q.questionType} onValueChange={(v) => changeType(qi, v as QuestionType)}>
@@ -199,7 +231,6 @@ function NewQuiz() {
                 )}
               </div>
 
-              {/* Choices */}
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground block">
                   Choices — {q.questionType === "checkbox" ? "tick all correct answers" : "select the one correct answer"}
@@ -219,7 +250,7 @@ function NewQuiz() {
                       onChange={(e) => setChoiceText(qi, ci, e.target.value)}
                     />
                     {q.choices.length > 2 && (
-                      <button onClick={() => rmC(qi, ci)} className="text-destructive p-1 shrink-0">
+                      <button type="button" onClick={() => rmC(qi, ci)} className="text-destructive p-1 shrink-0">
                         <Trash2 className="size-4" />
                       </button>
                     )}

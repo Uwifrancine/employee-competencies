@@ -29,8 +29,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
 
-  const sections: NavSection[] = [
-    {
+  const sections: NavSection[] = [];
+
+  if (auth.isEmployee) {
+    sections.push({
       label: "Me",
       items: [
         { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -40,8 +42,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         { to: "/development-plans", label: "My Development Plan", icon: Sprout },
         { to: "/reports/individual", label: "My Report", icon: BarChart3 },
       ],
-    },
-  ];
+    });
+  }
 
   if (auth.isSupervisor) {
     sections.push({
