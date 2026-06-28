@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { PageHeader } from "@/components/AppShell";
@@ -8,12 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Save } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/supervisor/quizzes/new")({
   ssr: false,
   component: NewQuiz,
+  validateSearch: (search: Record<string, unknown>) => ({
+    employeeId: search.employeeId as string | undefined,
+  }),
 });
 
 type QuestionType = "multipleChoice" | "checkbox" | "select";
@@ -39,12 +42,14 @@ function makeEmptyQuestion(): Question {
 }
 
 function NewQuiz() {
+  const { employeeId } = useSearch({ from: "/_authenticated/supervisor/quizzes/new" });
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [competencyId, setCompetencyId] = useState<string>("");
   const [competencies, setCompetencies] = useState<Competency[]>([]);
   const [questions, setQuestions] = useState<Question[]>([makeEmptyQuestion()]);
   const [saving, setSaving] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<{ id: string; fullName: string } | null>(null);
 
   useEffect(() => {
     api
@@ -52,6 +57,14 @@ function NewQuiz() {
       .then(setCompetencies)
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!employeeId) return;
+    api
+      .get<any>(`/api/employees/${employeeId}`)
+      .then((emp) => setSelectedEmployee({ id: emp.id, fullName: emp.fullName }))
+      .catch(() => toast.error("Failed to load employee"));
+  }, [employeeId]);
 
   const updateQ = (qi: number, patch: Partial<Question>) =>
     setQuestions((qs) => qs.map((q, i) => (i === qi ? { ...q, ...patch } : q)));
@@ -141,7 +154,14 @@ function NewQuiz() {
         });
       }
 
-      toast.success("Quiz created");
+      if (employeeId) {
+        await api.post("/api/quiz-assignments", {
+          quizId: quiz.id,
+          employeeId: employeeId,
+        });
+      }
+
+      toast.success(employeeId ? `Quiz assigned to ${selectedEmployee?.fullName}` : "Quiz created");
       window.location.href = "/supervisor/quizzes";
     } catch (e: any) {
       toast.error(e?.message ?? "Failed");
@@ -152,7 +172,10 @@ function NewQuiz() {
 
   return (
     <div>
-      <PageHeader title="New quiz" subtitle="Build a quiz with multiple choice, checkbox, or select questions." />
+      <PageHeader
+        title="New quiz"
+        subtitle={selectedEmployee ? `For ${selectedEmployee.fullName}` : "Build a quiz with multiple choice, checkbox, or select questions."}
+      />
       <div className="space-y-4 max-w-3xl">
         {/* Quiz metadata */}
         <Card>

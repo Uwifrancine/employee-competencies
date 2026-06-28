@@ -33,25 +33,25 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   if (auth.isEmployee) {
     sections.push({
-      label: "Me",
+      label: "My Profile",
       items: [
         { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-        { to: "/my-competencies", label: "My Competencies", icon: BookOpen },
-        { to: "/evaluations", label: "My Evaluations", icon: ClipboardCheck },
-        { to: "/my-quizzes", label: "My Quizzes", icon: HelpCircle },
-        { to: "/development-plans", label: "My Development Plan", icon: Sprout },
-        { to: "/reports/individual", label: "My Report", icon: BarChart3 },
+        { to: "/my-competencies", label: "Competencies", icon: BookOpen },
+        { to: "/evaluations", label: "Evaluations", icon: ClipboardCheck },
+        { to: "/my-quizzes", label: "Assigned Quizzes", icon: HelpCircle },
+        { to: "/development-plans", label: "Development Plans", icon: Sprout },
+        { to: "/reports/individual", label: "Performance Report", icon: BarChart3 },
       ],
     });
   }
 
   if (auth.isSupervisor) {
     sections.push({
-      label: "Supervisor",
+      label: "Team Management",
       items: [
-        { to: "/supervisor", label: "My Team", icon: UserCheck },
-        { to: "/supervisor/quizzes", label: "Quizzes", icon: GraduationCap },
-        { to: "/reports/team", label: "Team Report", icon: BarChart3 },
+        { to: "/supervisor", label: "Team Overview", icon: Users },
+        { to: "/supervisor/quizzes", label: "Quiz Management", icon: GraduationCap },
+        { to: "/reports/team", label: "Team Analytics", icon: BarChart3 },
       ],
     });
   }
@@ -109,10 +109,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="text-xs text-sidebar-foreground/70 mt-1">{auth.profile?.full_name}</div>
             <div className="text-[10px] uppercase tracking-wide text-accent mt-1">{auth.primaryRoleLabel}</div>
           </div>
-          <nav className="p-3 space-y-4">
-            {sections.map((section) => (
-              <div key={section.label}>
-                <div className="px-3 pb-1 text-[10px] uppercase tracking-wide text-sidebar-foreground/60">{section.label}</div>
+          <nav className="p-3 space-y-6">
+            {sections.map((section, idx) => (
+              <div key={section.label} className={idx > 0 ? "pt-4 border-t border-sidebar-foreground/10" : ""}>
+                <div className="px-3 pb-2 text-[10px] uppercase tracking-wide font-semibold text-sidebar-foreground/70">{section.label}</div>
                 <div className="space-y-1">
                   {section.items.map((i) => {
                     const active = pathname === i.to || pathname.startsWith(i.to + "/");
@@ -121,7 +121,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                         key={i.to}
                         to={i.to}
                         onClick={() => setOpen(false)}
-                        className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm ${
+                        className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
                           active
                             ? "bg-sidebar-primary text-sidebar-primary-foreground"
                             : "hover:bg-sidebar-accent"

@@ -4,28 +4,117 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { PageHeader } from "@/components/AppShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/reports/individual")({
   ssr: false,
   component: IndividualReport,
 });
 
+interface ReportData {
+  employee: {
+    id: string;
+    fullName: string;
+    email: string;
+    jobTitle?: { id: string; name: string };
+    supervisor?: { id: string; fullName: string };
+  };
+  summary: {
+    totalEvaluations?: number;
+    averageScore?: number | null;
+    totalDevPlans?: number;
+    openDevPlans?: number;
+    totalQuizAttempts?: number;
+    averageQuizScore?: number | null;
+  };
+  evaluations: {
+    id: string;
+    evaluatorType: string;
+    createdAt: string;
+    overallPercent: number;
+    scores: { id: string; score: number; competency: { id: string; name: string } }[];
+  }[];
+  developmentPlans: { id: string; title: string; status: string; items: unknown[] }[];
+  quizAttempts: {
+    id: string;
+    scorePct: number;
+    submittedAt?: string;
+    assignment?: { quiz?: { title: string } };
+  }[];
+}
+
 function IndividualReport() {
-  const { user, profile } = useAuth();
-  const [data, setData] = useState<any>(null);
+  const { user, loading: authLoading } = useAuth();
+  const [data, setData] = useState<ReportData | null>(null);
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
-    if (!user) return;
-    api.get<any>(`/api/reports/individual/${user.id}`).then(setData).catch(() => {});
+    console.log("IndividualReport - user:", user?.id);
+    if (!user?.id) {
+      console.log("IndividualReport - no user, skipping");
+      return;
+    }
+    console.log("IndividualReport - fetching individual report for user:", user.id);
+    api
+      .get<ReportData>(`/api/reports/individual/${user.id}`)
+      .then((result) => {
+        console.log("IndividualReport - got data:", result);
+        setData(result);
+        setError("");
+      })
+      .catch((err) => {
+        console.error("IndividualReport - error:", err);
+        setError(err?.message ?? "Failed to load report");
+      });
   }, [user?.id]);
 
-  if (!data) return <div className="text-muted-foreground">Loading…</div>;
+  if (authLoading || !data) {
+    return (
+      <div>
+        <PageHeader
+          title="My Report"
+          subtitle="Your personal performance summary. Only you can see this."
+        />
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card>
+            <CardContent className="p-5">
+              <Skeleton className="h-20" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-5">
+              <Skeleton className="h-20" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-5">
+              <Skeleton className="h-20" />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <PageHeader title="My Report" subtitle="Personal performance summary" />
+        <Card className="border-destructive">
+          <CardContent className="p-5 text-sm text-destructive">{error}</CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const { evaluations = [], developmentPlans = [], quizAttempts = [], summary } = data;
 
   return (
     <div>
-      <PageHeader title="My Report" subtitle={`Personal performance summary for ${profile?.full_name ?? ""}.`} />
+      <PageHeader
+        title="My Report"
+        subtitle="Your personal performance summary. Only you can see this."
+      />
       <div className="grid gap-4 sm:grid-cols-3">
         <Metric label="Avg self-eval" value={summary?.averageScore ?? 0} />
         <Metric label="Dev plans" value={summary?.totalDevPlans ?? 0} raw />

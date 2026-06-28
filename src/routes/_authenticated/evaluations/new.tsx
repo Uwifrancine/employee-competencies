@@ -1,10 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { PageHeader } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
@@ -21,18 +22,36 @@ interface CompScore {
 }
 
 function NewEval() {
-  const { profile } = useAuth();
+  const navigate = useNavigate();
+  const { profile, loading } = useAuth();
   const [comps, setComps] = useState<Comp[]>([]);
+  const [compsLoading, setCompsLoading] = useState(true);
   const [scores, setScores] = useState<Record<string, CompScore>>({});
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!profile?.job_title_id) return;
+    console.log("NewEval - loading:", loading, "profile:", profile);
+    if (!profile?.job_title_id) {
+      console.log("NewEval - no job title");
+      setCompsLoading(false);
+      return;
+    }
+    console.log("NewEval - fetching competencies for job title:", profile.job_title_id);
+    setCompsLoading(true);
     api
       .get<Comp[]>(`/api/competencies?jobTitleId=${profile.job_title_id}`)
       .then((cs) => {
+        console.log("NewEval - got competencies:", cs);
         setComps(cs);
         setScores(Object.fromEntries(cs.map((c) => [c.id, { score: null, comment: "" }])));
+      })
+      .catch((e) => {
+        console.error("NewEval - error loading competencies:", e);
+        toast.error("Failed to load competencies: " + e.message);
+      })
+      .finally(() => {
+        console.log("NewEval - finished loading");
+        setCompsLoading(false);
       });
   }, [profile?.job_title_id]);
 
@@ -43,7 +62,10 @@ function NewEval() {
     setScores((s) => ({ ...s, [id]: { score: s[id]?.score ?? null, comment: v } }));
 
   const submit = async () => {
-    if (!profile?.job_title_id) return;
+    if (!profile?.job_title_id) {
+      toast.error("Job title not assigned");
+      return;
+    }
     const unrated = comps.filter((c) => scores[c.id]?.score == null);
     if (unrated.length) return toast.error("Rate every competency before submitting");
     setSaving(true);
@@ -60,13 +82,25 @@ function NewEval() {
         scores: scoreArr,
       });
       toast.success("Self-evaluation submitted!");
-      window.location.href = "/evaluations";
+      navigate({ to: "/evaluations" });
     } catch (e: any) {
-      toast.error(e?.message ?? "Failed");
+      toast.error(e?.message ?? "Failed to submit evaluation");
     } finally {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="max-w-3xl">
+        <PageHeader
+          title="Self-evaluation"
+          subtitle="Rate yourself 1 (needs improvement) → 5 (excellent) and add an optional comment for each competency."
+        />
+        <Card><CardContent className="p-6"><Skeleton className="h-40" /></CardContent></Card>
+      </div>
+    );
+  }
 
   if (!profile?.job_title_id) {
     return (
@@ -85,7 +119,11 @@ function NewEval() {
         subtitle="Rate yourself 1 (needs improvement) → 5 (excellent) and add an optional comment for each competency."
       />
 
-      {comps.length === 0 ? (
+      {compsLoading ? (
+        <Card>
+          <CardContent className="p-6"><Skeleton className="h-40" /></CardContent>
+        </Card>
+      ) : comps.length === 0 ? (
         <Card>
           <CardContent className="p-6 text-sm text-muted-foreground">
             No competencies are defined for your job title yet. Ask your admin to add them.

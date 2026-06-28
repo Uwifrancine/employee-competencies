@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -15,8 +15,7 @@ export const Route = createFileRoute("/_authenticated/change-password")({
 });
 
 function ChangePassword() {
-  const { refresh } = useAuth();
-  const navigate = useNavigate();
+  const { logout } = useAuth();
   const [current, setCurrent] = useState("");
   const [pwd, setPwd] = useState("");
   const [pwd2, setPwd2] = useState("");
@@ -28,12 +27,12 @@ function ChangePassword() {
     setLoading(true);
     try {
       await api.post("/api/auth/change-password", { currentPassword: current, newPassword: pwd });
-      await refresh();
-      toast.success("Password updated");
-      navigate({ to: "/dashboard" });
+      toast.success("Password updated. Logging you out...");
+      setTimeout(() => {
+        logout();
+      }, 500);
     } catch (e: any) {
       toast.error(e?.message ?? "Failed");
-    } finally {
       setLoading(false);
     }
   };
