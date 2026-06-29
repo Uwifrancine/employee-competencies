@@ -8,14 +8,12 @@ import {
   Briefcase,
   Target,
   ClipboardCheck,
-  UserCheck,
   Sprout,
   LogOut,
   Menu,
   Shield,
   BookOpen,
   BarChart3,
-  HelpCircle,
   GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,14 +29,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const sections: NavSection[] = [];
 
-  if (auth.isEmployee) {
+  if (auth.isEmployee || auth.isSupervisor) {
     sections.push({
       label: "My Profile",
       items: [
         { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { to: "/my-competencies", label: "Competencies", icon: BookOpen },
         { to: "/evaluations", label: "Evaluations", icon: ClipboardCheck },
-        { to: "/my-quizzes", label: "Assigned Quizzes", icon: HelpCircle },
         { to: "/development-plans", label: "Development Plans", icon: Sprout },
         { to: "/reports/individual", label: "Performance Report", icon: BarChart3 },
       ],
@@ -50,7 +47,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       label: "Team Management",
       items: [
         { to: "/supervisor", label: "Team Overview", icon: Users },
+        { to: "/supervisor/competencies", label: "Setting Competencies", icon: Target },
         { to: "/supervisor/quizzes", label: "Quiz Management", icon: GraduationCap },
+        { to: "/supervisor/report", label: "Team Evaluation Report", icon: BarChart3 },
         { to: "/reports/team", label: "Team Analytics", icon: BarChart3 },
       ],
     });
@@ -61,9 +60,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       label: "HR",
       items: [
         { to: "/hr/employees", label: "Employees", icon: Users },
-        { to: "/admin/job-titles", label: "Job Titles", icon: Briefcase },
-        { to: "/admin/competencies", label: "Competencies", icon: Target },
-        { to: "/reports/org", label: "Org Report", icon: BarChart3 },
+        { to: "/hr/job-titles", label: "Job Titles", icon: Briefcase },
+        { to: "/hr/competencies", label: "Competencies", icon: Target },
+        { to: "/hr/organization-report", label: "Organization Report", icon: BarChart3 },
+        { to: "/hr/competencies-report", label: "Competencies Report", icon: BarChart3 },
       ],
     });
   }
@@ -72,12 +72,14 @@ export function AppShell({ children }: { children: ReactNode }) {
     sections.push({
       label: "Admin",
       items: [
+        { to: "/admin/analytics", label: "Analytics Dashboard", icon: BarChart3 },
         { to: "/admin/employees", label: "Employees", icon: Users },
         { to: "/admin/roles", label: "Roles", icon: Shield },
         { to: "/admin/job-titles", label: "Job Titles", icon: Briefcase },
         { to: "/admin/competencies", label: "Competencies", icon: Target },
-        { to: "/admin/quizzes", label: "Quizzes", icon: GraduationCap },
-        { to: "/reports/org", label: "Org Report", icon: BarChart3 },
+        { to: "/hr/organization-report", label: "Organization Report", icon: BarChart3 },
+        { to: "/admin/reports", label: "Job Titles Report", icon: BarChart3 },
+        { to: "/hr/competencies-report", label: "Competencies Report", icon: BarChart3 },
       ],
     });
   }

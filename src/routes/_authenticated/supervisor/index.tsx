@@ -8,10 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmployeeEvaluationDialog } from "@/components/EmployeeEvaluationDialog";
 import { EvaluateDialog } from "@/components/EvaluateDialog";
-import { QuizCreationDialog } from "@/components/QuizCreationDialog";
-import { Eye, BookOpen } from "lucide-react";
+import { Eye } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/supervisor")({
+export const Route = createFileRoute("/_authenticated/supervisor/")({
   ssr: false,
   component: SupervisorPage,
 });
@@ -31,7 +30,6 @@ function SupervisorPage() {
   const [selectedEmployee, setSelectedEmployee] = useState<{ id: string; name: string } | null>(null);
   const [evalDialogOpen, setEvalDialogOpen] = useState(false);
   const [evaluateDialogOpen, setEvaluateDialogOpen] = useState(false);
-  const [quizDialogOpen, setQuizDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -87,16 +85,6 @@ function SupervisorPage() {
                     >
                       Evaluate
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedEmployee({ id: r.id, name: r.fullName });
-                        setQuizDialogOpen(true);
-                      }}
-                    >
-                      <BookOpen className="size-3 mr-1" /> Quiz
-                    </Button>
                     {belowTarget && r.openDevPlans === 0 && (
                       <Link to="/supervisor/plan/new/$employeeId" params={{ employeeId: r.id }}>
                         <Button
@@ -134,15 +122,6 @@ function SupervisorPage() {
             .then((res) => setReports(res.members))
             .catch(() => {});
           setEvaluateDialogOpen(false);
-          setSelectedEmployee(null);
-        }}
-      />
-
-      <QuizCreationDialog
-        open={quizDialogOpen}
-        onOpenChange={setQuizDialogOpen}
-        onSuccess={() => {
-          setQuizDialogOpen(false);
           setSelectedEmployee(null);
         }}
       />

@@ -13,34 +13,53 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-interface Competency { id: string; name: string; jobTitle: { id: string; name: string } }
-interface Choice { text: string; isCorrect: boolean }
-interface Question { prompt: string; questionType: "multipleChoice" | "checkbox" | "select"; choices: Choice[] }
+interface Question {
+  id?: string;
+  prompt: string;
+  questionType: "multipleChoice" | "checkbox" | "select";
+  choices: { id?: string; text: string; isCorrect: boolean; orderIndex?: number }[];
+  orderIndex?: number;
+}
 
-interface QuizCreationDialogProps {
+interface Choice { text: string; isCorrect: boolean }
+
+interface QuizEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
-  jobTitle?: string;
-  jobTitleId?: string;
+  quizId: string;
+  initialTitle: string;
+  initialDescription: string | null;
 }
 
-export function QuizCreationDialog({ open, onOpenChange, onSuccess, jobTitle, jobTitleId }: QuizCreationDialogProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [competencyId, setCompetencyId] = useState<string>("");
-  const [competencies, setCompetencies] = useState<Competency[]>([]);
-  const [questions, setQuestions] = useState<Question[]>([{ prompt: "", questionType: "multipleChoice", choices: [{ text: "", isCorrect: true }, { text: "", isCorrect: false }] }]);
+export function QuizEditDialog({ open, onOpenChange, onSuccess, quizId, initialTitle, initialDescription }: QuizEditDialogProps) {
+  const [title, setTitle] = useState(initialTitle);
+  const [description, setDescription] = useState(initialDescription || "");
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    api.get<Competency[]>("/api/competencies").then(setCompetencies).catch(() => {});
-  }, [open]);
+    loadQuiz();
+  }, [open, quizId]);
+
+  const loadQuiz = async () => {
+    setLoading(true);
+    try {
+      const quiz = await api.get<any>(`/api/quizzes/${quizId}`);
+      setTitle(quiz.title);
+      setDescription(quiz.description || "");
+      setQuestions(quiz.questions || []);
+    } catch (e: any) {
+      toast.error("Failed to load quiz details");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const updateQ = (qi: number, patch: Partial<Question>) =>
     setQuestions((qs) => qs.map((q, i) => (i === qi ? { ...q, ...patch } : q)));
@@ -91,62 +110,57 @@ export function QuizCreationDialog({ open, onOpenChange, onSuccess, jobTitle, jo
     }
     setSaving(true);
     try {
-      const quiz = await api.post<{ id: string }>("/api/quizzes", {
+      await api.put(`/api/quizzes/${quizId}`, {
         title: title.trim(),
         description: description.trim() || undefined,
-        competencyId: competencyId || undefined,
-        jobTitleId: jobTitleId || undefined,
       });
 
       for (let qi = 0; qi < questions.length; qi++) {
         const q = questions[qi];
-        await api.post(`/api/quizzes/${quiz.id}/questions`, {
-          prompt: q.prompt.trim(),
-          orderIndex: qi,
-          questionType: q.questionType,
-          choices: q.choices.map((c, ci) => ({ text: c.text.trim(), isCorrect: c.isCorrect, orderIndex: ci })),
-        });
-      }
-
-      // Auto-assign quiz to job title members if created for a job title
-      if (jobTitleId) {
-        try {
-          const employees = await api.get<any[]>(`/api/employees?jobTitleId=${jobTitleId}`);
-          const assignPromises = employees.map((emp) =>
-            api.post("/api/quiz-assignments", { quizId: quiz.id, employeeId: emp.id }).catch(() => null)
-          );
-          await Promise.all(assignPromises);
-        } catch (e: any) {
-          console.error("Failed to auto-assign quiz:", e);
+        if (!q.id) {
+          await api.post(`/api/quizzes/${quizId}/questions`, {
+            prompt: q.prompt.trim(),
+            orderIndex: qi,
+            questionType: q.questionType,
+            choices: q.choices.map((c, ci) => ({ text: c.text.trim(), isCorrect: c.isCorrect, orderIndex: ci })),
+          });
+        } else {
+          await api.put(`/api/quizzes/${quizId}/questions/${q.id}`, {
+            prompt: q.prompt.trim(),
+            orderIndex: qi,
+            questionType: q.questionType,
+          });
         }
       }
 
-      toast.success("Quiz created successfully!");
+      toast.success("Quiz updated successfully!");
       onOpenChange(false);
-      setTitle("");
-      setDescription("");
-      setCompetencyId("");
-      setQuestions([{ prompt: "", questionType: "multipleChoice", choices: [{ text: "", isCorrect: true }, { text: "", isCorrect: false }] }]);
       onSuccess?.();
     } catch (e: any) {
-      toast.error(e?.message ?? "Failed to create quiz");
+      toast.error(e?.message ?? "Failed to update quiz");
     } finally {
       setSaving(false);
     }
   };
 
+  if (loading) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Loading quiz...</DialogTitle>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[80vh] overflow-y-auto max-w-2xl">
         <DialogHeader>
-          <DialogTitle>
-            Create New Quiz {jobTitle && `— ${jobTitle}`}
-          </DialogTitle>
-          <DialogDescription>
-            {jobTitle
-              ? `Build a quiz covering all competencies for the ${jobTitle} role.`
-              : "Build a quiz with multiple choice, checkbox, or select questions."}
-          </DialogDescription>
+          <DialogTitle>Edit Quiz</DialogTitle>
+          <DialogDescription>Update quiz details and questions</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -161,32 +175,6 @@ export function QuizCreationDialog({ open, onOpenChange, onSuccess, jobTitle, jo
                 <Label>Description (optional)</Label>
                 <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is this quiz about?" />
               </div>
-              {!jobTitle && (
-                <div>
-                  <Label>Competency (optional)</Label>
-                  <Select value={competencyId} onValueChange={setCompetencyId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Link to a competency…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {competencies.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name} — {c.jobTitle.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {competencyId && (
-                    <button
-                      type="button"
-                      onClick={() => setCompetencyId("")}
-                      className="text-xs text-muted-foreground underline mt-1"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-              )}
             </CardContent>
           </Card>
 
@@ -260,7 +248,7 @@ export function QuizCreationDialog({ open, onOpenChange, onSuccess, jobTitle, jo
 
           {/* Save Button */}
           <Button onClick={save} disabled={saving} className="w-full bg-accent text-accent-foreground">
-            {saving ? "Creating…" : "Create Quiz"}
+            {saving ? "Updating…" : "Save Changes"}
           </Button>
         </div>
       </DialogContent>

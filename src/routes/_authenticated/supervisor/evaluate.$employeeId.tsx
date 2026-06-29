@@ -6,8 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, CheckCircle, AlertTriangle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ArrowLeft, CheckCircle, AlertTriangle, Eye, Download } from "lucide-react";
 import { toast } from "sonner";
+import html2pdf from "html2pdf.js";
 
 export const Route = createFileRoute("/_authenticated/supervisor/evaluate/$employeeId")({
   ssr: false,
@@ -22,7 +29,12 @@ interface SelfScore {
   competency: { id: string; name: string };
 }
 interface SelfEval { id: string; overallPercent: number; createdAt: string; scores: SelfScore[] }
-interface QuizAttempt { id: string; scorePct: number; quiz: { title: string } }
+interface QuizAttempt {
+  id: string;
+  scorePct: number;
+  quiz: { id: string; title: string; questions: any[] };
+  answers: any[];
+}
 
 function SupervisorEval() {
   const { employeeId } = Route.useParams();
@@ -32,6 +44,8 @@ function SupervisorEval() {
   const [alreadyEvaluated, setAlreadyEvaluated] = useState(false);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState<"pass" | "fail" | null>(null);
+  const [selectedQuiz, setSelectedQuiz] = useState<QuizAttempt | null>(null);
+  const [showQuizModal, setShowQuizModal] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -58,7 +72,7 @@ function SupervisorEval() {
       );
       if (supEvals.length > 0) setAlreadyEvaluated(true);
 
-      // Quiz attempts for this employee
+      // Quiz attempts for this employee - load full details
       const empAssignments = assignments.filter((a: any) => a.employee?.id === employeeId);
       const attempts: QuizAttempt[] = empAssignments
         .filter((a: any) => a.attempts?.length > 0)
@@ -66,6 +80,7 @@ function SupervisorEval() {
           id: a.attempts[0].id ?? a.id,
           scorePct: a.attempts[0].scorePct,
           quiz: a.quiz,
+          answers: a.attempts[0].answers || [],
         }));
       setQuizAttempts(attempts);
     })();
@@ -89,6 +104,39 @@ function SupervisorEval() {
     } finally {
       setSaving(null);
     }
+  };
+
+  const exportQuizToPdf = (quiz: QuizAttempt) => {
+    if (!emp) return;
+
+    const html = document.createElement("div");
+    html.innerHTML = `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h1 style="margin-bottom: 10px;">${quiz.quiz.title}</h1>
+        <p style="color: #666; margin-bottom: 20px;">Employee: ${emp.fullName} | Score: ${Math.round(quiz.scorePct)}%</p>
+
+        <div style="border-top: 2px solid #ccc; padding-top: 20px;">
+          ${quiz.quiz.questions.map((q: any, idx: number) => `
+            <div style="margin-bottom: 20px; page-break-inside: avoid;">
+              <p style="font-weight: bold; margin-bottom: 10px;">${idx + 1}. ${q.prompt}</p>
+              <div style="margin-left: 20px; padding: 10px; background: #f5f5f5; border-radius: 4px;">
+                <p style="margin: 5px 0;"><strong>Answer:</strong>
+                  ${quiz.answers
+                    .filter((a: any) => a.questionId === q.id)
+                    .map((a: any) => {
+                      const choice = q.choices.find((c: any) => c.id === a.choiceId);
+                      return choice ? choice.text : "No answer";
+                    })
+                    .join(", ") || "No answer"}
+                </p>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+
+    html2pdf().set({ html2canvas: { scale: 2 }, margin: 10 }).from(html).save(`${emp.fullName}_quiz_${quiz.quiz.title}.pdf`);
   };
 
   if (!emp) return <div className="text-muted-foreground">Loading…</div>;
@@ -155,11 +203,32 @@ function SupervisorEval() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Quiz results</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-3">
             {quizAttempts.map((a) => (
-              <div key={a.id} className="flex items-center justify-between text-sm">
-                <span>{a.quiz?.title}</span>
-                <span className="font-semibold">{a.scorePct.toFixed(0)}%</span>
+              <div key={a.id} className="flex items-center justify-between p-3 rounded-lg border border-border hover:border-accent transition">
+                <div className="flex-1">
+                  <div className="font-medium">{a.quiz?.title}</div>
+                  <div className="text-sm text-muted-foreground">{Math.round(a.scorePct)}% · {a.quiz?.questions?.length || 0} questions</div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedQuiz(a);
+                      setShowQuizModal(true);
+                    }}
+                  >
+                    <Eye className="size-4 mr-1" /> View
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => exportQuizToPdf(a)}
+                  >
+                    <Download className="size-4 mr-1" /> PDF
+                  </Button>
+                </div>
               </div>
             ))}
           </CardContent>
@@ -207,6 +276,68 @@ function SupervisorEval() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Quiz Details Modal */}
+      <Dialog open={showQuizModal} onOpenChange={setShowQuizModal}>
+        <DialogContent className="max-w-2xl max-h-screen overflow-y-auto">
+          {selectedQuiz && (
+            <div className="space-y-4">
+              <DialogHeader>
+                <DialogTitle>{selectedQuiz.quiz.title}</DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Score:</span>
+                  <span className="font-semibold text-lg text-accent">{Math.round(selectedQuiz.scorePct)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Questions:</span>
+                  <span>{selectedQuiz.quiz.questions?.length || 0}</span>
+                </div>
+              </div>
+
+              <div className="border-t pt-4 space-y-4">
+                {selectedQuiz.quiz.questions?.map((q: any, idx: number) => {
+                  const answers = selectedQuiz.answers.filter((a: any) => a.questionId === q.id);
+                  const selectedChoices = answers.map((a: any) => {
+                    const choice = q.choices.find((c: any) => c.id === a.choiceId);
+                    return choice?.text || "No answer";
+                  });
+
+                  return (
+                    <div key={q.id} className="p-3 rounded-lg bg-muted/50">
+                      <p className="font-medium mb-2">{idx + 1}. {q.prompt}</p>
+                      <div className="text-sm space-y-1">
+                        <p className="text-muted-foreground">
+                          <strong>Answer:</strong> {selectedChoices.length > 0 ? selectedChoices.join(", ") : "No answer"}
+                        </p>
+                        {selectedChoices.length > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            <strong>Correct:</strong> {q.choices.filter((c: any) => c.isCorrect).map((c: any) => c.text).join(", ")}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex gap-2 pt-4 border-t">
+                <Button
+                  onClick={() => exportQuizToPdf(selectedQuiz)}
+                  className="flex-1 bg-accent text-accent-foreground"
+                >
+                  <Download className="size-4 mr-2" /> Export as PDF
+                </Button>
+                <Button onClick={() => setShowQuizModal(false)} variant="outline" className="flex-1">
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

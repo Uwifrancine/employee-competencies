@@ -4,7 +4,8 @@ import { api } from "@/lib/api";
 import { PageHeader } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Shield } from "lucide-react";
@@ -21,33 +22,29 @@ const ALL_ROLES: Role[] = ["admin", "hr", "employee"];
 
 function RolesPage() {
   const [rows, setRows] = useState<Row[]>([]);
-  const [pending, setPending] = useState<Record<string, Role[]>>({});
+  const [pending, setPending] = useState<Record<string, Role>>({});
   const [saving, setSaving] = useState<string | null>(null);
 
   const load = async () => {
     const data = await api.get<Row[]>("/api/employees");
     setRows(data);
     setPending(
-      Object.fromEntries(data.map((r) => [r.id, r.roles.map((x) => x.role)]))
+      Object.fromEntries(data.map((r) => [r.id, r.roles[0]?.role ?? "employee"]))
     );
   };
   useEffect(() => { load(); }, []);
 
-  const toggle = (uid: string, role: Role, checked: boolean) => {
-    setPending((prev) => {
-      const cur = new Set(prev[uid] ?? []);
-      if (checked) cur.add(role); else cur.delete(role);
-      return { ...prev, [uid]: Array.from(cur) as Role[] };
-    });
+  const updateRole = (uid: string, role: Role) => {
+    setPending((prev) => ({ ...prev, [uid]: role }));
   };
 
   const commit = async (uid: string) => {
-    const next = pending[uid] ?? [];
-    if (next.length === 0) return toast.error("Pick at least one role");
+    const nextRole = pending[uid];
+    if (!nextRole) return toast.error("Select a role");
     setSaving(uid);
     try {
-      await api.put(`/api/employees/${uid}`, { roles: next });
-      toast.success("Roles updated");
+      await api.put(`/api/employees/${uid}`, { roles: [nextRole] });
+      toast.success("Role updated");
       load();
     } catch (e: any) {
       toast.error(e?.message ?? "Failed");
@@ -60,7 +57,7 @@ function RolesPage() {
     <div>
       <PageHeader
         title="Role Management"
-        subtitle="Grant admin, HR, or employee access. Supervisor is automatic when an employee has direct reports."
+        subtitle="Assign one role per employee: Admin, HR, or Employee. Supervisor role is automatic for employees with direct reports."
       />
       <Card>
         <CardContent className="p-0">
@@ -69,31 +66,39 @@ function RolesPage() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
-                {ALL_ROLES.map((r) => (
-                  <TableHead key={r} className="text-center capitalize">{r}</TableHead>
-                ))}
+                <TableHead className="text-center">Current Role</TableHead>
+                <TableHead>Select Role</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((row) => {
-                const currentRoles = row.roles.map((x) => x.role);
-                const sel = new Set(pending[row.id] ?? []);
-                const dirty = JSON.stringify([...sel].sort()) !== JSON.stringify([...currentRoles].sort());
+                const currentRole = row.roles[0]?.role ?? "employee";
+                const pendingRole = pending[row.id] ?? currentRole;
+                const dirty = pendingRole !== currentRole;
                 return (
                   <TableRow key={row.id}>
                     <TableCell className="font-medium flex items-center gap-2">
                       <Shield className="size-4 text-muted-foreground" /> {row.fullName}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{row.email}</TableCell>
-                    {ALL_ROLES.map((r) => (
-                      <TableCell key={r} className="text-center">
-                        <Checkbox
-                          checked={sel.has(r)}
-                          onCheckedChange={(c) => toggle(row.id, r, !!c)}
-                        />
-                      </TableCell>
-                    ))}
+                    <TableCell className="text-center">
+                      <span className="inline-block px-2 py-1 rounded bg-muted text-sm capitalize">
+                        {currentRole}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <RadioGroup value={pendingRole} onValueChange={(v) => updateRole(row.id, v as Role)}>
+                        <div className="flex items-center gap-4">
+                          {ALL_ROLES.map((r) => (
+                            <div key={r} className="flex items-center gap-2">
+                              <RadioGroupItem value={r} id={`${row.id}-${r}`} />
+                              <Label htmlFor={`${row.id}-${r}`} className="capitalize cursor-pointer">{r}</Label>
+                            </div>
+                          ))}
+                        </div>
+                      </RadioGroup>
+                    </TableCell>
                     <TableCell>
                       <Button
                         size="sm"
@@ -108,7 +113,7 @@ function RolesPage() {
                 );
               })}
               {rows.length === 0 && (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No users.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No employees yet.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

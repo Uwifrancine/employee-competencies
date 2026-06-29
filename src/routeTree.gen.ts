@@ -12,25 +12,32 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedSupervisorRouteImport } from './routes/_authenticated/supervisor'
 import { Route as AuthenticatedMyQuizzesRouteImport } from './routes/_authenticated/my-quizzes'
 import { Route as AuthenticatedMyCompetenciesRouteImport } from './routes/_authenticated/my-competencies'
 import { Route as AuthenticatedEvaluationsRouteImport } from './routes/_authenticated/evaluations'
 import { Route as AuthenticatedDevelopmentPlansRouteImport } from './routes/_authenticated/development-plans'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedChangePasswordRouteImport } from './routes/_authenticated/change-password'
+import { Route as AuthenticatedSupervisorIndexRouteImport } from './routes/_authenticated/supervisor/index'
+import { Route as AuthenticatedSupervisorReportRouteImport } from './routes/_authenticated/supervisor/report'
 import { Route as AuthenticatedSupervisorQuizzesRouteImport } from './routes/_authenticated/supervisor/quizzes'
+import { Route as AuthenticatedSupervisorCompetenciesRouteImport } from './routes/_authenticated/supervisor/competencies'
 import { Route as AuthenticatedReportsTeamRouteImport } from './routes/_authenticated/reports/team'
-import { Route as AuthenticatedReportsOrgRouteImport } from './routes/_authenticated/reports/org'
 import { Route as AuthenticatedReportsIndividualRouteImport } from './routes/_authenticated/reports/individual'
 import { Route as AuthenticatedMyQuizzesAssignmentIdRouteImport } from './routes/_authenticated/my-quizzes.$assignmentId'
+import { Route as AuthenticatedHrOrganizationReportRouteImport } from './routes/_authenticated/hr/organization-report'
+import { Route as AuthenticatedHrJobTitlesRouteImport } from './routes/_authenticated/hr/job-titles'
 import { Route as AuthenticatedHrEmployeesRouteImport } from './routes/_authenticated/hr/employees'
+import { Route as AuthenticatedHrCompetenciesReportRouteImport } from './routes/_authenticated/hr/competencies-report'
+import { Route as AuthenticatedHrCompetenciesRouteImport } from './routes/_authenticated/hr/competencies'
 import { Route as AuthenticatedEvaluationsNewRouteImport } from './routes/_authenticated/evaluations/new'
 import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin/roles'
+import { Route as AuthenticatedAdminReportsRouteImport } from './routes/_authenticated/admin/reports'
 import { Route as AuthenticatedAdminQuizzesRouteImport } from './routes/_authenticated/admin/quizzes'
 import { Route as AuthenticatedAdminJobTitlesRouteImport } from './routes/_authenticated/admin/job-titles'
 import { Route as AuthenticatedAdminEmployeesRouteImport } from './routes/_authenticated/admin/employees'
 import { Route as AuthenticatedAdminCompetenciesRouteImport } from './routes/_authenticated/admin/competencies'
+import { Route as AuthenticatedAdminAnalyticsRouteImport } from './routes/_authenticated/admin/analytics'
 import { Route as AuthenticatedSupervisorQuizzesNewRouteImport } from './routes/_authenticated/supervisor/quizzes.new'
 import { Route as AuthenticatedSupervisorEvaluateEmployeeIdRouteImport } from './routes/_authenticated/supervisor/evaluate.$employeeId'
 import { Route as AuthenticatedSupervisorEmployeeEmployeeIdRouteImport } from './routes/_authenticated/supervisor/employee.$employeeId'
@@ -49,11 +56,6 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedSupervisorRoute = AuthenticatedSupervisorRouteImport.update({
-  id: '/supervisor',
-  path: '/supervisor',
-  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedMyQuizzesRoute = AuthenticatedMyQuizzesRouteImport.update({
   id: '/my-quizzes',
@@ -89,11 +91,29 @@ const AuthenticatedChangePasswordRoute =
     path: '/change-password',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedSupervisorIndexRoute =
+  AuthenticatedSupervisorIndexRouteImport.update({
+    id: '/supervisor/',
+    path: '/supervisor/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSupervisorReportRoute =
+  AuthenticatedSupervisorReportRouteImport.update({
+    id: '/supervisor/report',
+    path: '/supervisor/report',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSupervisorQuizzesRoute =
   AuthenticatedSupervisorQuizzesRouteImport.update({
-    id: '/quizzes',
-    path: '/quizzes',
-    getParentRoute: () => AuthenticatedSupervisorRoute,
+    id: '/supervisor/quizzes',
+    path: '/supervisor/quizzes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSupervisorCompetenciesRoute =
+  AuthenticatedSupervisorCompetenciesRouteImport.update({
+    id: '/supervisor/competencies',
+    path: '/supervisor/competencies',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedReportsTeamRoute =
   AuthenticatedReportsTeamRouteImport.update({
@@ -101,11 +121,6 @@ const AuthenticatedReportsTeamRoute =
     path: '/reports/team',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedReportsOrgRoute = AuthenticatedReportsOrgRouteImport.update({
-  id: '/reports/org',
-  path: '/reports/org',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedReportsIndividualRoute =
   AuthenticatedReportsIndividualRouteImport.update({
     id: '/reports/individual',
@@ -118,10 +133,34 @@ const AuthenticatedMyQuizzesAssignmentIdRoute =
     path: '/$assignmentId',
     getParentRoute: () => AuthenticatedMyQuizzesRoute,
   } as any)
+const AuthenticatedHrOrganizationReportRoute =
+  AuthenticatedHrOrganizationReportRouteImport.update({
+    id: '/hr/organization-report',
+    path: '/hr/organization-report',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedHrJobTitlesRoute =
+  AuthenticatedHrJobTitlesRouteImport.update({
+    id: '/hr/job-titles',
+    path: '/hr/job-titles',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedHrEmployeesRoute =
   AuthenticatedHrEmployeesRouteImport.update({
     id: '/hr/employees',
     path: '/hr/employees',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedHrCompetenciesReportRoute =
+  AuthenticatedHrCompetenciesReportRouteImport.update({
+    id: '/hr/competencies-report',
+    path: '/hr/competencies-report',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedHrCompetenciesRoute =
+  AuthenticatedHrCompetenciesRouteImport.update({
+    id: '/hr/competencies',
+    path: '/hr/competencies',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedEvaluationsNewRoute =
@@ -135,6 +174,12 @@ const AuthenticatedAdminRolesRoute = AuthenticatedAdminRolesRouteImport.update({
   path: '/admin/roles',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminReportsRoute =
+  AuthenticatedAdminReportsRouteImport.update({
+    id: '/admin/reports',
+    path: '/admin/reports',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminQuizzesRoute =
   AuthenticatedAdminQuizzesRouteImport.update({
     id: '/admin/quizzes',
@@ -159,6 +204,12 @@ const AuthenticatedAdminCompetenciesRoute =
     path: '/admin/competencies',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminAnalyticsRoute =
+  AuthenticatedAdminAnalyticsRouteImport.update({
+    id: '/admin/analytics',
+    path: '/admin/analytics',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSupervisorQuizzesNewRoute =
   AuthenticatedSupervisorQuizzesNewRouteImport.update({
     id: '/new',
@@ -167,21 +218,21 @@ const AuthenticatedSupervisorQuizzesNewRoute =
   } as any)
 const AuthenticatedSupervisorEvaluateEmployeeIdRoute =
   AuthenticatedSupervisorEvaluateEmployeeIdRouteImport.update({
-    id: '/evaluate/$employeeId',
-    path: '/evaluate/$employeeId',
-    getParentRoute: () => AuthenticatedSupervisorRoute,
+    id: '/supervisor/evaluate/$employeeId',
+    path: '/supervisor/evaluate/$employeeId',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedSupervisorEmployeeEmployeeIdRoute =
   AuthenticatedSupervisorEmployeeEmployeeIdRouteImport.update({
-    id: '/employee/$employeeId',
-    path: '/employee/$employeeId',
-    getParentRoute: () => AuthenticatedSupervisorRoute,
+    id: '/supervisor/employee/$employeeId',
+    path: '/supervisor/employee/$employeeId',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedSupervisorPlanNewEmployeeIdRoute =
   AuthenticatedSupervisorPlanNewEmployeeIdRouteImport.update({
-    id: '/plan/new/$employeeId',
-    path: '/plan/new/$employeeId',
-    getParentRoute: () => AuthenticatedSupervisorRoute,
+    id: '/supervisor/plan/new/$employeeId',
+    path: '/supervisor/plan/new/$employeeId',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -193,19 +244,26 @@ export interface FileRoutesByFullPath {
   '/evaluations': typeof AuthenticatedEvaluationsRouteWithChildren
   '/my-competencies': typeof AuthenticatedMyCompetenciesRoute
   '/my-quizzes': typeof AuthenticatedMyQuizzesRouteWithChildren
-  '/supervisor': typeof AuthenticatedSupervisorRouteWithChildren
+  '/admin/analytics': typeof AuthenticatedAdminAnalyticsRoute
   '/admin/competencies': typeof AuthenticatedAdminCompetenciesRoute
   '/admin/employees': typeof AuthenticatedAdminEmployeesRoute
   '/admin/job-titles': typeof AuthenticatedAdminJobTitlesRoute
   '/admin/quizzes': typeof AuthenticatedAdminQuizzesRoute
+  '/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/evaluations/new': typeof AuthenticatedEvaluationsNewRoute
+  '/hr/competencies': typeof AuthenticatedHrCompetenciesRoute
+  '/hr/competencies-report': typeof AuthenticatedHrCompetenciesReportRoute
   '/hr/employees': typeof AuthenticatedHrEmployeesRoute
+  '/hr/job-titles': typeof AuthenticatedHrJobTitlesRoute
+  '/hr/organization-report': typeof AuthenticatedHrOrganizationReportRoute
   '/my-quizzes/$assignmentId': typeof AuthenticatedMyQuizzesAssignmentIdRoute
   '/reports/individual': typeof AuthenticatedReportsIndividualRoute
-  '/reports/org': typeof AuthenticatedReportsOrgRoute
   '/reports/team': typeof AuthenticatedReportsTeamRoute
+  '/supervisor/competencies': typeof AuthenticatedSupervisorCompetenciesRoute
   '/supervisor/quizzes': typeof AuthenticatedSupervisorQuizzesRouteWithChildren
+  '/supervisor/report': typeof AuthenticatedSupervisorReportRoute
+  '/supervisor/': typeof AuthenticatedSupervisorIndexRoute
   '/supervisor/employee/$employeeId': typeof AuthenticatedSupervisorEmployeeEmployeeIdRoute
   '/supervisor/evaluate/$employeeId': typeof AuthenticatedSupervisorEvaluateEmployeeIdRoute
   '/supervisor/quizzes/new': typeof AuthenticatedSupervisorQuizzesNewRoute
@@ -220,19 +278,26 @@ export interface FileRoutesByTo {
   '/evaluations': typeof AuthenticatedEvaluationsRouteWithChildren
   '/my-competencies': typeof AuthenticatedMyCompetenciesRoute
   '/my-quizzes': typeof AuthenticatedMyQuizzesRouteWithChildren
-  '/supervisor': typeof AuthenticatedSupervisorRouteWithChildren
+  '/admin/analytics': typeof AuthenticatedAdminAnalyticsRoute
   '/admin/competencies': typeof AuthenticatedAdminCompetenciesRoute
   '/admin/employees': typeof AuthenticatedAdminEmployeesRoute
   '/admin/job-titles': typeof AuthenticatedAdminJobTitlesRoute
   '/admin/quizzes': typeof AuthenticatedAdminQuizzesRoute
+  '/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/evaluations/new': typeof AuthenticatedEvaluationsNewRoute
+  '/hr/competencies': typeof AuthenticatedHrCompetenciesRoute
+  '/hr/competencies-report': typeof AuthenticatedHrCompetenciesReportRoute
   '/hr/employees': typeof AuthenticatedHrEmployeesRoute
+  '/hr/job-titles': typeof AuthenticatedHrJobTitlesRoute
+  '/hr/organization-report': typeof AuthenticatedHrOrganizationReportRoute
   '/my-quizzes/$assignmentId': typeof AuthenticatedMyQuizzesAssignmentIdRoute
   '/reports/individual': typeof AuthenticatedReportsIndividualRoute
-  '/reports/org': typeof AuthenticatedReportsOrgRoute
   '/reports/team': typeof AuthenticatedReportsTeamRoute
+  '/supervisor/competencies': typeof AuthenticatedSupervisorCompetenciesRoute
   '/supervisor/quizzes': typeof AuthenticatedSupervisorQuizzesRouteWithChildren
+  '/supervisor/report': typeof AuthenticatedSupervisorReportRoute
+  '/supervisor': typeof AuthenticatedSupervisorIndexRoute
   '/supervisor/employee/$employeeId': typeof AuthenticatedSupervisorEmployeeEmployeeIdRoute
   '/supervisor/evaluate/$employeeId': typeof AuthenticatedSupervisorEvaluateEmployeeIdRoute
   '/supervisor/quizzes/new': typeof AuthenticatedSupervisorQuizzesNewRoute
@@ -249,19 +314,26 @@ export interface FileRoutesById {
   '/_authenticated/evaluations': typeof AuthenticatedEvaluationsRouteWithChildren
   '/_authenticated/my-competencies': typeof AuthenticatedMyCompetenciesRoute
   '/_authenticated/my-quizzes': typeof AuthenticatedMyQuizzesRouteWithChildren
-  '/_authenticated/supervisor': typeof AuthenticatedSupervisorRouteWithChildren
+  '/_authenticated/admin/analytics': typeof AuthenticatedAdminAnalyticsRoute
   '/_authenticated/admin/competencies': typeof AuthenticatedAdminCompetenciesRoute
   '/_authenticated/admin/employees': typeof AuthenticatedAdminEmployeesRoute
   '/_authenticated/admin/job-titles': typeof AuthenticatedAdminJobTitlesRoute
   '/_authenticated/admin/quizzes': typeof AuthenticatedAdminQuizzesRoute
+  '/_authenticated/admin/reports': typeof AuthenticatedAdminReportsRoute
   '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/_authenticated/evaluations/new': typeof AuthenticatedEvaluationsNewRoute
+  '/_authenticated/hr/competencies': typeof AuthenticatedHrCompetenciesRoute
+  '/_authenticated/hr/competencies-report': typeof AuthenticatedHrCompetenciesReportRoute
   '/_authenticated/hr/employees': typeof AuthenticatedHrEmployeesRoute
+  '/_authenticated/hr/job-titles': typeof AuthenticatedHrJobTitlesRoute
+  '/_authenticated/hr/organization-report': typeof AuthenticatedHrOrganizationReportRoute
   '/_authenticated/my-quizzes/$assignmentId': typeof AuthenticatedMyQuizzesAssignmentIdRoute
   '/_authenticated/reports/individual': typeof AuthenticatedReportsIndividualRoute
-  '/_authenticated/reports/org': typeof AuthenticatedReportsOrgRoute
   '/_authenticated/reports/team': typeof AuthenticatedReportsTeamRoute
+  '/_authenticated/supervisor/competencies': typeof AuthenticatedSupervisorCompetenciesRoute
   '/_authenticated/supervisor/quizzes': typeof AuthenticatedSupervisorQuizzesRouteWithChildren
+  '/_authenticated/supervisor/report': typeof AuthenticatedSupervisorReportRoute
+  '/_authenticated/supervisor/': typeof AuthenticatedSupervisorIndexRoute
   '/_authenticated/supervisor/employee/$employeeId': typeof AuthenticatedSupervisorEmployeeEmployeeIdRoute
   '/_authenticated/supervisor/evaluate/$employeeId': typeof AuthenticatedSupervisorEvaluateEmployeeIdRoute
   '/_authenticated/supervisor/quizzes/new': typeof AuthenticatedSupervisorQuizzesNewRoute
@@ -278,19 +350,26 @@ export interface FileRouteTypes {
     | '/evaluations'
     | '/my-competencies'
     | '/my-quizzes'
-    | '/supervisor'
+    | '/admin/analytics'
     | '/admin/competencies'
     | '/admin/employees'
     | '/admin/job-titles'
     | '/admin/quizzes'
+    | '/admin/reports'
     | '/admin/roles'
     | '/evaluations/new'
+    | '/hr/competencies'
+    | '/hr/competencies-report'
     | '/hr/employees'
+    | '/hr/job-titles'
+    | '/hr/organization-report'
     | '/my-quizzes/$assignmentId'
     | '/reports/individual'
-    | '/reports/org'
     | '/reports/team'
+    | '/supervisor/competencies'
     | '/supervisor/quizzes'
+    | '/supervisor/report'
+    | '/supervisor/'
     | '/supervisor/employee/$employeeId'
     | '/supervisor/evaluate/$employeeId'
     | '/supervisor/quizzes/new'
@@ -305,19 +384,26 @@ export interface FileRouteTypes {
     | '/evaluations'
     | '/my-competencies'
     | '/my-quizzes'
-    | '/supervisor'
+    | '/admin/analytics'
     | '/admin/competencies'
     | '/admin/employees'
     | '/admin/job-titles'
     | '/admin/quizzes'
+    | '/admin/reports'
     | '/admin/roles'
     | '/evaluations/new'
+    | '/hr/competencies'
+    | '/hr/competencies-report'
     | '/hr/employees'
+    | '/hr/job-titles'
+    | '/hr/organization-report'
     | '/my-quizzes/$assignmentId'
     | '/reports/individual'
-    | '/reports/org'
     | '/reports/team'
+    | '/supervisor/competencies'
     | '/supervisor/quizzes'
+    | '/supervisor/report'
+    | '/supervisor'
     | '/supervisor/employee/$employeeId'
     | '/supervisor/evaluate/$employeeId'
     | '/supervisor/quizzes/new'
@@ -333,19 +419,26 @@ export interface FileRouteTypes {
     | '/_authenticated/evaluations'
     | '/_authenticated/my-competencies'
     | '/_authenticated/my-quizzes'
-    | '/_authenticated/supervisor'
+    | '/_authenticated/admin/analytics'
     | '/_authenticated/admin/competencies'
     | '/_authenticated/admin/employees'
     | '/_authenticated/admin/job-titles'
     | '/_authenticated/admin/quizzes'
+    | '/_authenticated/admin/reports'
     | '/_authenticated/admin/roles'
     | '/_authenticated/evaluations/new'
+    | '/_authenticated/hr/competencies'
+    | '/_authenticated/hr/competencies-report'
     | '/_authenticated/hr/employees'
+    | '/_authenticated/hr/job-titles'
+    | '/_authenticated/hr/organization-report'
     | '/_authenticated/my-quizzes/$assignmentId'
     | '/_authenticated/reports/individual'
-    | '/_authenticated/reports/org'
     | '/_authenticated/reports/team'
+    | '/_authenticated/supervisor/competencies'
     | '/_authenticated/supervisor/quizzes'
+    | '/_authenticated/supervisor/report'
+    | '/_authenticated/supervisor/'
     | '/_authenticated/supervisor/employee/$employeeId'
     | '/_authenticated/supervisor/evaluate/$employeeId'
     | '/_authenticated/supervisor/quizzes/new'
@@ -380,13 +473,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/supervisor': {
-      id: '/_authenticated/supervisor'
-      path: '/supervisor'
-      fullPath: '/supervisor'
-      preLoaderRoute: typeof AuthenticatedSupervisorRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/my-quizzes': {
       id: '/_authenticated/my-quizzes'
@@ -430,25 +516,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedChangePasswordRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/supervisor/': {
+      id: '/_authenticated/supervisor/'
+      path: '/supervisor'
+      fullPath: '/supervisor/'
+      preLoaderRoute: typeof AuthenticatedSupervisorIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/supervisor/report': {
+      id: '/_authenticated/supervisor/report'
+      path: '/supervisor/report'
+      fullPath: '/supervisor/report'
+      preLoaderRoute: typeof AuthenticatedSupervisorReportRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/supervisor/quizzes': {
       id: '/_authenticated/supervisor/quizzes'
-      path: '/quizzes'
+      path: '/supervisor/quizzes'
       fullPath: '/supervisor/quizzes'
       preLoaderRoute: typeof AuthenticatedSupervisorQuizzesRouteImport
-      parentRoute: typeof AuthenticatedSupervisorRoute
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/supervisor/competencies': {
+      id: '/_authenticated/supervisor/competencies'
+      path: '/supervisor/competencies'
+      fullPath: '/supervisor/competencies'
+      preLoaderRoute: typeof AuthenticatedSupervisorCompetenciesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/reports/team': {
       id: '/_authenticated/reports/team'
       path: '/reports/team'
       fullPath: '/reports/team'
       preLoaderRoute: typeof AuthenticatedReportsTeamRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/reports/org': {
-      id: '/_authenticated/reports/org'
-      path: '/reports/org'
-      fullPath: '/reports/org'
-      preLoaderRoute: typeof AuthenticatedReportsOrgRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/reports/individual': {
@@ -465,11 +565,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMyQuizzesAssignmentIdRouteImport
       parentRoute: typeof AuthenticatedMyQuizzesRoute
     }
+    '/_authenticated/hr/organization-report': {
+      id: '/_authenticated/hr/organization-report'
+      path: '/hr/organization-report'
+      fullPath: '/hr/organization-report'
+      preLoaderRoute: typeof AuthenticatedHrOrganizationReportRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/hr/job-titles': {
+      id: '/_authenticated/hr/job-titles'
+      path: '/hr/job-titles'
+      fullPath: '/hr/job-titles'
+      preLoaderRoute: typeof AuthenticatedHrJobTitlesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/hr/employees': {
       id: '/_authenticated/hr/employees'
       path: '/hr/employees'
       fullPath: '/hr/employees'
       preLoaderRoute: typeof AuthenticatedHrEmployeesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/hr/competencies-report': {
+      id: '/_authenticated/hr/competencies-report'
+      path: '/hr/competencies-report'
+      fullPath: '/hr/competencies-report'
+      preLoaderRoute: typeof AuthenticatedHrCompetenciesReportRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/hr/competencies': {
+      id: '/_authenticated/hr/competencies'
+      path: '/hr/competencies'
+      fullPath: '/hr/competencies'
+      preLoaderRoute: typeof AuthenticatedHrCompetenciesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/evaluations/new': {
@@ -484,6 +612,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/roles'
       fullPath: '/admin/roles'
       preLoaderRoute: typeof AuthenticatedAdminRolesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/reports': {
+      id: '/_authenticated/admin/reports'
+      path: '/admin/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof AuthenticatedAdminReportsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/quizzes': {
@@ -514,6 +649,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminCompetenciesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/analytics': {
+      id: '/_authenticated/admin/analytics'
+      path: '/admin/analytics'
+      fullPath: '/admin/analytics'
+      preLoaderRoute: typeof AuthenticatedAdminAnalyticsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/supervisor/quizzes/new': {
       id: '/_authenticated/supervisor/quizzes/new'
       path: '/new'
@@ -523,24 +665,24 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/supervisor/evaluate/$employeeId': {
       id: '/_authenticated/supervisor/evaluate/$employeeId'
-      path: '/evaluate/$employeeId'
+      path: '/supervisor/evaluate/$employeeId'
       fullPath: '/supervisor/evaluate/$employeeId'
       preLoaderRoute: typeof AuthenticatedSupervisorEvaluateEmployeeIdRouteImport
-      parentRoute: typeof AuthenticatedSupervisorRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/supervisor/employee/$employeeId': {
       id: '/_authenticated/supervisor/employee/$employeeId'
-      path: '/employee/$employeeId'
+      path: '/supervisor/employee/$employeeId'
       fullPath: '/supervisor/employee/$employeeId'
       preLoaderRoute: typeof AuthenticatedSupervisorEmployeeEmployeeIdRouteImport
-      parentRoute: typeof AuthenticatedSupervisorRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/supervisor/plan/new/$employeeId': {
       id: '/_authenticated/supervisor/plan/new/$employeeId'
-      path: '/plan/new/$employeeId'
+      path: '/supervisor/plan/new/$employeeId'
       fullPath: '/supervisor/plan/new/$employeeId'
       preLoaderRoute: typeof AuthenticatedSupervisorPlanNewEmployeeIdRouteImport
-      parentRoute: typeof AuthenticatedSupervisorRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
@@ -589,30 +731,6 @@ const AuthenticatedSupervisorQuizzesRouteWithChildren =
     AuthenticatedSupervisorQuizzesRouteChildren,
   )
 
-interface AuthenticatedSupervisorRouteChildren {
-  AuthenticatedSupervisorQuizzesRoute: typeof AuthenticatedSupervisorQuizzesRouteWithChildren
-  AuthenticatedSupervisorEmployeeEmployeeIdRoute: typeof AuthenticatedSupervisorEmployeeEmployeeIdRoute
-  AuthenticatedSupervisorEvaluateEmployeeIdRoute: typeof AuthenticatedSupervisorEvaluateEmployeeIdRoute
-  AuthenticatedSupervisorPlanNewEmployeeIdRoute: typeof AuthenticatedSupervisorPlanNewEmployeeIdRoute
-}
-
-const AuthenticatedSupervisorRouteChildren: AuthenticatedSupervisorRouteChildren =
-  {
-    AuthenticatedSupervisorQuizzesRoute:
-      AuthenticatedSupervisorQuizzesRouteWithChildren,
-    AuthenticatedSupervisorEmployeeEmployeeIdRoute:
-      AuthenticatedSupervisorEmployeeEmployeeIdRoute,
-    AuthenticatedSupervisorEvaluateEmployeeIdRoute:
-      AuthenticatedSupervisorEvaluateEmployeeIdRoute,
-    AuthenticatedSupervisorPlanNewEmployeeIdRoute:
-      AuthenticatedSupervisorPlanNewEmployeeIdRoute,
-  }
-
-const AuthenticatedSupervisorRouteWithChildren =
-  AuthenticatedSupervisorRoute._addFileChildren(
-    AuthenticatedSupervisorRouteChildren,
-  )
-
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedChangePasswordRoute: typeof AuthenticatedChangePasswordRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
@@ -620,16 +738,27 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedEvaluationsRoute: typeof AuthenticatedEvaluationsRouteWithChildren
   AuthenticatedMyCompetenciesRoute: typeof AuthenticatedMyCompetenciesRoute
   AuthenticatedMyQuizzesRoute: typeof AuthenticatedMyQuizzesRouteWithChildren
-  AuthenticatedSupervisorRoute: typeof AuthenticatedSupervisorRouteWithChildren
+  AuthenticatedAdminAnalyticsRoute: typeof AuthenticatedAdminAnalyticsRoute
   AuthenticatedAdminCompetenciesRoute: typeof AuthenticatedAdminCompetenciesRoute
   AuthenticatedAdminEmployeesRoute: typeof AuthenticatedAdminEmployeesRoute
   AuthenticatedAdminJobTitlesRoute: typeof AuthenticatedAdminJobTitlesRoute
   AuthenticatedAdminQuizzesRoute: typeof AuthenticatedAdminQuizzesRoute
+  AuthenticatedAdminReportsRoute: typeof AuthenticatedAdminReportsRoute
   AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
+  AuthenticatedHrCompetenciesRoute: typeof AuthenticatedHrCompetenciesRoute
+  AuthenticatedHrCompetenciesReportRoute: typeof AuthenticatedHrCompetenciesReportRoute
   AuthenticatedHrEmployeesRoute: typeof AuthenticatedHrEmployeesRoute
+  AuthenticatedHrJobTitlesRoute: typeof AuthenticatedHrJobTitlesRoute
+  AuthenticatedHrOrganizationReportRoute: typeof AuthenticatedHrOrganizationReportRoute
   AuthenticatedReportsIndividualRoute: typeof AuthenticatedReportsIndividualRoute
-  AuthenticatedReportsOrgRoute: typeof AuthenticatedReportsOrgRoute
   AuthenticatedReportsTeamRoute: typeof AuthenticatedReportsTeamRoute
+  AuthenticatedSupervisorCompetenciesRoute: typeof AuthenticatedSupervisorCompetenciesRoute
+  AuthenticatedSupervisorQuizzesRoute: typeof AuthenticatedSupervisorQuizzesRouteWithChildren
+  AuthenticatedSupervisorReportRoute: typeof AuthenticatedSupervisorReportRoute
+  AuthenticatedSupervisorIndexRoute: typeof AuthenticatedSupervisorIndexRoute
+  AuthenticatedSupervisorEmployeeEmployeeIdRoute: typeof AuthenticatedSupervisorEmployeeEmployeeIdRoute
+  AuthenticatedSupervisorEvaluateEmployeeIdRoute: typeof AuthenticatedSupervisorEvaluateEmployeeIdRoute
+  AuthenticatedSupervisorPlanNewEmployeeIdRoute: typeof AuthenticatedSupervisorPlanNewEmployeeIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -639,16 +768,34 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedEvaluationsRoute: AuthenticatedEvaluationsRouteWithChildren,
   AuthenticatedMyCompetenciesRoute: AuthenticatedMyCompetenciesRoute,
   AuthenticatedMyQuizzesRoute: AuthenticatedMyQuizzesRouteWithChildren,
-  AuthenticatedSupervisorRoute: AuthenticatedSupervisorRouteWithChildren,
+  AuthenticatedAdminAnalyticsRoute: AuthenticatedAdminAnalyticsRoute,
   AuthenticatedAdminCompetenciesRoute: AuthenticatedAdminCompetenciesRoute,
   AuthenticatedAdminEmployeesRoute: AuthenticatedAdminEmployeesRoute,
   AuthenticatedAdminJobTitlesRoute: AuthenticatedAdminJobTitlesRoute,
   AuthenticatedAdminQuizzesRoute: AuthenticatedAdminQuizzesRoute,
+  AuthenticatedAdminReportsRoute: AuthenticatedAdminReportsRoute,
   AuthenticatedAdminRolesRoute: AuthenticatedAdminRolesRoute,
+  AuthenticatedHrCompetenciesRoute: AuthenticatedHrCompetenciesRoute,
+  AuthenticatedHrCompetenciesReportRoute:
+    AuthenticatedHrCompetenciesReportRoute,
   AuthenticatedHrEmployeesRoute: AuthenticatedHrEmployeesRoute,
+  AuthenticatedHrJobTitlesRoute: AuthenticatedHrJobTitlesRoute,
+  AuthenticatedHrOrganizationReportRoute:
+    AuthenticatedHrOrganizationReportRoute,
   AuthenticatedReportsIndividualRoute: AuthenticatedReportsIndividualRoute,
-  AuthenticatedReportsOrgRoute: AuthenticatedReportsOrgRoute,
   AuthenticatedReportsTeamRoute: AuthenticatedReportsTeamRoute,
+  AuthenticatedSupervisorCompetenciesRoute:
+    AuthenticatedSupervisorCompetenciesRoute,
+  AuthenticatedSupervisorQuizzesRoute:
+    AuthenticatedSupervisorQuizzesRouteWithChildren,
+  AuthenticatedSupervisorReportRoute: AuthenticatedSupervisorReportRoute,
+  AuthenticatedSupervisorIndexRoute: AuthenticatedSupervisorIndexRoute,
+  AuthenticatedSupervisorEmployeeEmployeeIdRoute:
+    AuthenticatedSupervisorEmployeeEmployeeIdRoute,
+  AuthenticatedSupervisorEvaluateEmployeeIdRoute:
+    AuthenticatedSupervisorEvaluateEmployeeIdRoute,
+  AuthenticatedSupervisorPlanNewEmployeeIdRoute:
+    AuthenticatedSupervisorPlanNewEmployeeIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

@@ -3,7 +3,7 @@ import { AppShell } from "@/components/AppShell";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
     const token = localStorage.getItem("auth_token");
     if (!token) throw redirect({ to: "/auth" });
   },

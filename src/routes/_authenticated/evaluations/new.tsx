@@ -7,6 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { GraduationCap } from "lucide-react";
+import { QuizModal } from "@/components/QuizModal";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/evaluations/new")({
@@ -27,6 +35,8 @@ function NewEval() {
   const [compsLoading, setCompsLoading] = useState(true);
   const [scores, setScores] = useState<Record<string, CompScore>>({});
   const [saving, setSaving] = useState(false);
+  const [showQuizDialog, setShowQuizDialog] = useState(false);
+  const [pendingQuizId, setPendingQuizId] = useState<string | null>(null);
 
   useEffect(() => {
     console.log("NewEval - loading:", loading, "profile:", profile);
@@ -80,10 +90,30 @@ function NewEval() {
         evaluatorType: "self",
         scores: scoreArr,
       });
+
       toast.success("Self-evaluation submitted!");
-      // Go to quizzes if supervisor already made one visible, otherwise evaluations page
-      const quizzes = await api.get<any[]>("/api/quiz-assignments").catch(() => []);
-      window.location.href = quizzes.length > 0 ? "/my-quizzes" : "/evaluations";
+
+      // Check if there are pending quizzes and show dialog
+      try {
+        console.log("Checking for pending quizzes...");
+        const assignments = await api.get<any[]>("/api/quiz-assignments");
+        console.log("Assignments:", assignments);
+        const pending = assignments.find((a) => a.status === "pending");
+        console.log("Pending quiz:", pending);
+        if (pending) {
+          console.log("Showing quiz dialog for assignment:", pending.id);
+          setPendingQuizId(pending.id);
+          setShowQuizDialog(true);
+          return;
+        }
+      } catch (e: any) {
+        console.error("Failed to check pending quizzes:", e);
+      }
+
+      console.log("No pending quizzes, redirecting to evaluations");
+      setTimeout(() => {
+        window.location.href = "/evaluations";
+      }, 500);
     } catch (e: any) {
       if ((e?.message ?? "").includes("already submitted")) {
         toast.error("You have already submitted a self-evaluation for this role.");
@@ -193,6 +223,30 @@ function NewEval() {
           </Button>
         </div>
       )}
+
+      <Dialog open={showQuizDialog} onOpenChange={setShowQuizDialog}>
+        <DialogContent className="sm:max-w-2xl max-h-screen overflow-y-auto">
+          {pendingQuizId && (
+            <div className="space-y-4">
+              <DialogHeader>
+                <div className="flex items-center gap-2">
+                  <GraduationCap className="size-5 text-accent" />
+                  <DialogTitle>Answer Quiz</DialogTitle>
+                </div>
+              </DialogHeader>
+              <div className="py-4">
+                <QuizModal
+                  assignmentId={pendingQuizId}
+                  onComplete={() => {
+                    setShowQuizDialog(false);
+                    window.location.href = "/evaluations";
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
