@@ -1,11 +1,12 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { PageHeader } from "@/components/AppShell";
-import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader, StatusBadge } from "@/components/AppShell";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { ArrowLeft, CheckCircle, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/supervisor/evaluate/$employeeId")({
@@ -13,99 +14,199 @@ export const Route = createFileRoute("/_authenticated/supervisor/evaluate/$emplo
   component: SupervisorEval,
 });
 
-interface Comp { id: string; name: string; description: string | null }
 interface Emp { id: string; fullName: string; jobTitle: { id: string; name: string } | null }
+interface SelfScore {
+  id: string;
+  score: number;
+  comment: string | null;
+  competency: { id: string; name: string };
+}
+interface SelfEval { id: string; overallPercent: number; createdAt: string; scores: SelfScore[] }
+interface QuizAttempt { id: string; scorePct: number; quiz: { title: string } }
 
 function SupervisorEval() {
   const { employeeId } = Route.useParams();
-  const navigate = useNavigate();
   const [emp, setEmp] = useState<Emp | null>(null);
-  const [comps, setComps] = useState<Comp[]>([]);
-  const [selfScores, setSelfScores] = useState<Record<string, number>>({});
-  const [scores, setScores] = useState<Record<string, number>>({});
+  const [selfEval, setSelfEval] = useState<SelfEval | null>(null);
+  const [quizAttempts, setQuizAttempts] = useState<QuizAttempt[]>([]);
+  const [alreadyEvaluated, setAlreadyEvaluated] = useState(false);
   const [notes, setNotes] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState<"pass" | "fail" | null>(null);
 
   useEffect(() => {
     (async () => {
-      const e = await api.get<Emp>(`/api/employees/${employeeId}`);
+      const [e, allEvals, assignments] = await Promise.all([
+        api.get<Emp>(`/api/employees/${employeeId}`),
+        api.get<any[]>("/api/evaluations"),
+        api.get<any[]>("/api/quiz-assignments").catch(() => []),
+      ]);
       setEmp(e);
-      if (!e.jobTitle) return;
 
-      const cs = await api.get<Comp[]>(`/api/competencies?jobTitleId=${e.jobTitle.id}`);
-      setComps(cs);
-
-      // Load last self-evaluation scores
-      const evals = await api.get<any[]>("/api/evaluations");
-      const lastSelf = evals
+      // Find employee's self-eval
+      const selfEvals = allEvals
         .filter((x) => x.employee?.id === employeeId && x.evaluatorType === "self")
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-      if (lastSelf) {
-        const full = await api.get<any>(`/api/evaluations/${lastSelf.id}`);
-        const map: Record<string, number> = {};
-        for (const s of full.scores ?? []) map[s.competency.id] = Math.round(s.score / 20);
-        setSelfScores(map);
+      if (selfEvals[0]) {
+        const full = await api.get<SelfEval>(`/api/evaluations/${selfEvals[0].id}`);
+        setSelfEval(full);
       }
+
+      // Check if supervisor already submitted a decision for this employee
+      const supEvals = allEvals.filter(
+        (x) => x.employee?.id === employeeId && x.evaluatorType === "supervisor"
+      );
+      if (supEvals.length > 0) setAlreadyEvaluated(true);
+
+      // Quiz attempts for this employee
+      const empAssignments = assignments.filter((a: any) => a.employee?.id === employeeId);
+      const attempts: QuizAttempt[] = empAssignments
+        .filter((a: any) => a.attempts?.length > 0)
+        .map((a: any) => ({
+          id: a.attempts[0].id ?? a.id,
+          scorePct: a.attempts[0].scorePct,
+          quiz: a.quiz,
+        }));
+      setQuizAttempts(attempts);
     })();
   }, [employeeId]);
 
-  const submit = async () => {
-    if (!emp?.jobTitle) return;
-    if (comps.some((c) => !scores[c.id])) return toast.error("Score every competency");
-    setSaving(true);
+  const decide = async (decision: "pass" | "fail") => {
+    if (!emp?.jobTitle) return toast.error("Employee has no job title");
+    setSaving(decision);
     try {
-      const scoreArr = comps.map((c) => ({ competencyId: c.id, score: scores[c.id] * 20 }));
-      const ev = await api.post<any>("/api/evaluations", {
+      await api.post("/api/evaluations", {
         employeeId: emp.id,
         jobTitleId: emp.jobTitle.id,
         evaluatorType: "supervisor",
-        notes: notes || undefined,
-        scores: scoreArr,
+        decision,
+        notes: notes.trim() || undefined,
       });
-      toast.success(`Submitted. Overall: ${ev.overallPercent.toFixed(1)}%`);
-      if (ev.overallPercent < 60) navigate({ to: "/supervisor/plan/new/$employeeId", params: { employeeId } });
-      else navigate({ to: "/supervisor" });
+      toast.success(decision === "pass" ? "Employee approved" : "Development need flagged");
+      window.location.href = `/supervisor/employee/${employeeId}`;
     } catch (e: any) {
       toast.error(e?.message ?? "Failed");
     } finally {
-      setSaving(false);
+      setSaving(null);
     }
   };
 
   if (!emp) return <div className="text-muted-foreground">Loading…</div>;
 
   return (
-    <div className="max-w-3xl">
-      <PageHeader title={`Evaluate: ${emp.fullName}`} subtitle="Score each competency 1–5. Self-eval scores are shown for reference." />
-      <Card><CardContent className="p-5 space-y-5">
-        {comps.map((c) => (
-          <div key={c.id}>
-            <div className="flex items-baseline justify-between">
-              <div>
-                <div className="font-medium">{c.name}</div>
-                {c.description && <div className="text-sm text-muted-foreground">{c.description}</div>}
-              </div>
+    <div className="max-w-3xl space-y-5">
+      <div className="flex items-center gap-3">
+        <Link to="/supervisor/employee/$employeeId" params={{ employeeId }}>
+          <Button variant="ghost" size="sm"><ArrowLeft className="size-4 mr-1" /> Back</Button>
+        </Link>
+      </div>
+
+      <PageHeader
+        title={`Review: ${emp.fullName}`}
+        subtitle={emp.jobTitle?.name ?? "No job title"}
+      />
+
+      {/* Self-eval reference */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Self-evaluation scores (reference)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {selfEval ? (
+            <div className="space-y-3">
               <div className="text-xs text-muted-foreground">
-                Self: <span className="font-medium text-foreground">{selfScores[c.id] ?? "—"}</span> · Yours:{" "}
-                <span className="font-medium text-primary">{scores[c.id] ?? "—"}</span>
+                Submitted {new Date(selfEval.createdAt).toLocaleDateString()} ·{" "}
+                Average: <span className="font-semibold text-foreground">{Number(selfEval.overallPercent).toFixed(0)}%</span>
+              </div>
+              <div className="divide-y divide-border">
+                {selfEval.scores.map((s) => {
+                  const stars = Math.round(s.score / 20);
+                  return (
+                    <div key={s.id} className="py-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">{s.competency.name}</span>
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((v) => (
+                            <div key={v} className={`w-6 h-6 rounded text-xs grid place-items-center font-medium ${
+                              v <= stars ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
+                            }`}>{v}</div>
+                          ))}
+                        </div>
+                      </div>
+                      {s.comment && (
+                        <p className="text-xs text-muted-foreground mt-0.5 italic">"{s.comment}"</p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
-            <div className="mt-2 flex gap-2">
-              {[1, 2, 3, 4, 5].map((v) => (
-                <button key={v} onClick={() => setScores({ ...scores, [c.id]: v })}
-                  className={`flex-1 h-10 rounded-md border text-sm font-medium ${scores[c.id] === v
-                    ? "bg-accent text-accent-foreground border-accent"
-                    : "border-border hover:border-accent"}`}>{v}</button>
-              ))}
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {emp.fullName} has not submitted a self-evaluation yet. You can still record a decision.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Quiz results */}
+      {quizAttempts.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Quiz results</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {quizAttempts.map((a) => (
+              <div key={a.id} className="flex items-center justify-between text-sm">
+                <span>{a.quiz?.title}</span>
+                <span className="font-semibold">{a.scorePct.toFixed(0)}%</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Decision */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Your decision</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {alreadyEvaluated && (
+            <div className="text-sm text-amber-600 bg-amber-50 rounded-md px-3 py-2">
+              You have already submitted a decision for this employee. Submitting again will add another record.
             </div>
+          )}
+          <div>
+            <Label>Notes (optional)</Label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add feedback or development notes…"
+              className="resize-none h-24 mt-1"
+            />
           </div>
-        ))}
-        <div><Label>Notes (optional)</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
-        <Button onClick={submit} disabled={saving} className="w-full bg-accent text-accent-foreground">
-          {saving ? "Submitting…" : "Submit evaluation"}
-        </Button>
-      </CardContent></Card>
+          <div className="flex gap-3">
+            <Button
+              onClick={() => decide("pass")}
+              disabled={!!saving}
+              className="flex-1 bg-success text-success-foreground hover:bg-success/90"
+            >
+              <CheckCircle className="size-4 mr-2" />
+              {saving === "pass" ? "Saving…" : "Approve (Pass)"}
+            </Button>
+            <Button
+              onClick={() => decide("fail")}
+              disabled={!!saving}
+              variant="outline"
+              className="flex-1 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+            >
+              <AlertTriangle className="size-4 mr-2" />
+              {saving === "fail" ? "Saving…" : "Needs Development (Fail)"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

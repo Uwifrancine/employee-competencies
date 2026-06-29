@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -22,7 +22,6 @@ interface CompScore {
 }
 
 function NewEval() {
-  const navigate = useNavigate();
   const { profile, loading } = useAuth();
   const [comps, setComps] = useState<Comp[]>([]);
   const [compsLoading, setCompsLoading] = useState(true);
@@ -82,8 +81,15 @@ function NewEval() {
         scores: scoreArr,
       });
       toast.success("Self-evaluation submitted!");
-      navigate({ to: "/evaluations" });
+      // Go to quizzes if supervisor already made one visible, otherwise evaluations page
+      const quizzes = await api.get<any[]>("/api/quiz-assignments").catch(() => []);
+      window.location.href = quizzes.length > 0 ? "/my-quizzes" : "/evaluations";
     } catch (e: any) {
+      if ((e?.message ?? "").includes("already submitted")) {
+        toast.error("You have already submitted a self-evaluation for this role.");
+        window.location.href = "/evaluations";
+        return;
+      }
       toast.error(e?.message ?? "Failed to submit evaluation");
     } finally {
       setSaving(false);
