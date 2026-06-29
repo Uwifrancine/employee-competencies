@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QuizCreationDialog } from "@/components/QuizCreationDialog";
-import { Plus, GraduationCap, Send, Eye, EyeOff } from "lucide-react";
+import { Plus, GraduationCap, Send, Eye, EyeOff, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/supervisor/quizzes")({
@@ -20,7 +20,17 @@ export const Route = createFileRoute("/_authenticated/supervisor/quizzes")({
 interface Quiz {
   id: string; title: string; description: string | null; createdAt: string;
   competency: { id: string; name: string } | null;
+  _count?: { questions: number; assignments: number };
 }
+
+interface QuizDetail {
+  id: string; title: string;
+  questions: {
+    id: string; prompt: string; questionType: string; orderIndex: number;
+    choices: { id: string; text: string; isCorrect: boolean; orderIndex: number }[];
+  }[];
+}
+
 interface Report {
   id: string; fullName: string; jobTitleId?: string; jobTitle?: { id: string; name: string }
 }
@@ -42,6 +52,8 @@ function SupervisorQuizzes() {
   const [assignMode, setAssignMode] = useState<"employee" | "jobtitle">("employee");
   const [selectedJobTitle, setSelectedJobTitle] = useState<string>("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [previewQuiz, setPreviewQuiz] = useState<QuizDetail | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   const load = async () => {
     if (!user) return;
@@ -64,6 +76,18 @@ function SupervisorQuizzes() {
   };
   useEffect(() => { load(); }, [user?.id]);
 
+  const openPreview = async (quizId: string) => {
+    setLoadingPreview(true);
+    try {
+      const d = await api.get<QuizDetail>(`/api/quizzes/${quizId}`);
+      setPreviewQuiz(d);
+    } catch {
+      toast.error("Failed to load quiz");
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
   const submitAssign = async () => {
     if (!assignQuiz) return;
 
@@ -75,13 +99,11 @@ function SupervisorQuizzes() {
         await api.post("/api/quiz-assignments", { quizId: assignQuiz.id, employeeId: assignTo });
         toast.success("Quiz assigned to employee");
       } else {
-        // Assign to all employees with this job title
         const employeesWithJobTitle = reports.filter((r: any) => r.jobTitleId === selectedJobTitle);
         if (employeesWithJobTitle.length === 0) {
           toast.error("No employees found with this job title");
           return;
         }
-
         await Promise.all(
           employeesWithJobTitle.map((emp: any) =>
             api.post("/api/quiz-assignments", { quizId: assignQuiz.id, employeeId: emp.id })
@@ -140,11 +162,21 @@ function SupervisorQuizzes() {
                 {q.description && (
                   <div className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{q.description}</div>
                 )}
+                {q._count && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {q._count.questions} question{q._count.questions !== 1 ? "s" : ""} · {q._count.assignments} assigned
+                  </div>
+                )}
               </div>
             </div>
-            <Button size="sm" variant="outline" className="w-full" onClick={() => setAssignQuiz(q)}>
-              <Send className="size-4 mr-1" /> Assign to report
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" className="flex-1" onClick={() => openPreview(q.id)}>
+                <BookOpen className="size-3.5 mr-1" /> Preview
+              </Button>
+              <Button size="sm" variant="outline" className="flex-1" onClick={() => setAssignQuiz(q)}>
+                <Send className="size-3.5 mr-1" /> Assign
+              </Button>
+            </div>
           </CardContent></Card>
         ))}
         {quizzes.length === 0 && (
@@ -155,7 +187,11 @@ function SupervisorQuizzes() {
       <div className="mt-8">
         <div className="text-sm font-medium mb-2">Assignments</div>
         <Card><CardContent className="p-4 space-y-2">
-          {assignments.length === 0 && <div className="text-sm text-muted-foreground">No assignments yet.</div>}
+          {assignments.length === 0 && (
+            <div className="text-sm text-muted-foreground">
+              No assignments yet. Click <strong>Assign</strong> on a quiz card above to assign it to an employee.
+            </div>
+          )}
           {assignments.map((a) => (
             <div key={a.id} className="flex items-center justify-between text-sm border-b border-border last:border-0 py-2 gap-2">
               <div className="min-w-0">
@@ -185,6 +221,7 @@ function SupervisorQuizzes() {
         </p>
       </div>
 
+      {/* Assign dialog */}
       <Dialog open={!!assignQuiz} onOpenChange={(o) => !o && setAssignQuiz(null)}>
         <DialogContent>
           <DialogHeader>
@@ -235,6 +272,53 @@ function SupervisorQuizzes() {
         onOpenChange={setCreateDialogOpen}
         onSuccess={load}
       />
+
+      {/* Quiz preview dialog */}
+      <Dialog open={!!previewQuiz} onOpenChange={(o) => !o && setPreviewQuiz(null)}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{previewQuiz?.title}</DialogTitle>
+            <DialogDescription>
+              {previewQuiz?.questions.length ?? 0} question{previewQuiz?.questions.length !== 1 ? "s" : ""} — correct answers highlighted in green
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            {previewQuiz?.questions
+              .slice()
+              .sort((a, b) => a.orderIndex - b.orderIndex)
+              .map((q, qi) => (
+                <div key={q.id} className="space-y-2">
+                  <div className="font-medium text-sm">
+                    {qi + 1}. {q.prompt}
+                    <span className="ml-2 text-xs font-normal text-muted-foreground capitalize">
+                      ({q.questionType === "multipleChoice" ? "multiple choice" : q.questionType})
+                    </span>
+                  </div>
+                  <ul className="space-y-1 pl-4">
+                    {q.choices
+                      .slice()
+                      .sort((a, b) => a.orderIndex - b.orderIndex)
+                      .map((c) => (
+                        <li key={c.id} className={`flex items-center gap-2 text-sm rounded px-2 py-1 ${
+                          c.isCorrect ? "bg-success/10 text-success font-medium" : "text-muted-foreground"
+                        }`}>
+                          <span className={`size-2 rounded-full shrink-0 ${c.isCorrect ? "bg-success" : "bg-border"}`} />
+                          {c.text}
+                          {c.isCorrect && <span className="text-xs ml-auto">✓ correct</span>}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {loadingPreview && (
+        <div className="fixed inset-0 grid place-items-center bg-background/50 z-50">
+          <div className="text-muted-foreground">Loading quiz…</div>
+        </div>
+      )}
     </div>
   );
 }

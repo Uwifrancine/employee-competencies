@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -40,17 +40,21 @@ function evalStatusLabel(r: Eval) {
 }
 
 function EvaluationsPage() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { profile } = useAuth();
   const [rows, setRows] = useState<Eval[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (pathname !== "/evaluations") return;
     api
       .get<Eval[]>("/api/evaluations")
       .then(setRows)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [pathname]);
+
+  if (pathname !== "/evaluations") return <Outlet />;
 
   const selfEvals = rows.filter((r) => r.evaluatorType === "self");
   const supervisorEvals = rows.filter((r) => r.evaluatorType === "supervisor");

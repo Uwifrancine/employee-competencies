@@ -27,6 +27,7 @@ import { Route as AuthenticatedMyQuizzesAssignmentIdRouteImport } from './routes
 import { Route as AuthenticatedHrEmployeesRouteImport } from './routes/_authenticated/hr/employees'
 import { Route as AuthenticatedEvaluationsNewRouteImport } from './routes/_authenticated/evaluations/new'
 import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin/roles'
+import { Route as AuthenticatedAdminQuizzesRouteImport } from './routes/_authenticated/admin/quizzes'
 import { Route as AuthenticatedAdminJobTitlesRouteImport } from './routes/_authenticated/admin/job-titles'
 import { Route as AuthenticatedAdminEmployeesRouteImport } from './routes/_authenticated/admin/employees'
 import { Route as AuthenticatedAdminCompetenciesRouteImport } from './routes/_authenticated/admin/competencies'
@@ -134,6 +135,12 @@ const AuthenticatedAdminRolesRoute = AuthenticatedAdminRolesRouteImport.update({
   path: '/admin/roles',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminQuizzesRoute =
+  AuthenticatedAdminQuizzesRouteImport.update({
+    id: '/admin/quizzes',
+    path: '/admin/quizzes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminJobTitlesRoute =
   AuthenticatedAdminJobTitlesRouteImport.update({
     id: '/admin/job-titles',
@@ -190,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/admin/competencies': typeof AuthenticatedAdminCompetenciesRoute
   '/admin/employees': typeof AuthenticatedAdminEmployeesRoute
   '/admin/job-titles': typeof AuthenticatedAdminJobTitlesRoute
+  '/admin/quizzes': typeof AuthenticatedAdminQuizzesRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/evaluations/new': typeof AuthenticatedEvaluationsNewRoute
   '/hr/employees': typeof AuthenticatedHrEmployeesRoute
@@ -216,6 +224,7 @@ export interface FileRoutesByTo {
   '/admin/competencies': typeof AuthenticatedAdminCompetenciesRoute
   '/admin/employees': typeof AuthenticatedAdminEmployeesRoute
   '/admin/job-titles': typeof AuthenticatedAdminJobTitlesRoute
+  '/admin/quizzes': typeof AuthenticatedAdminQuizzesRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/evaluations/new': typeof AuthenticatedEvaluationsNewRoute
   '/hr/employees': typeof AuthenticatedHrEmployeesRoute
@@ -244,6 +253,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/competencies': typeof AuthenticatedAdminCompetenciesRoute
   '/_authenticated/admin/employees': typeof AuthenticatedAdminEmployeesRoute
   '/_authenticated/admin/job-titles': typeof AuthenticatedAdminJobTitlesRoute
+  '/_authenticated/admin/quizzes': typeof AuthenticatedAdminQuizzesRoute
   '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/_authenticated/evaluations/new': typeof AuthenticatedEvaluationsNewRoute
   '/_authenticated/hr/employees': typeof AuthenticatedHrEmployeesRoute
@@ -272,6 +282,7 @@ export interface FileRouteTypes {
     | '/admin/competencies'
     | '/admin/employees'
     | '/admin/job-titles'
+    | '/admin/quizzes'
     | '/admin/roles'
     | '/evaluations/new'
     | '/hr/employees'
@@ -298,6 +309,7 @@ export interface FileRouteTypes {
     | '/admin/competencies'
     | '/admin/employees'
     | '/admin/job-titles'
+    | '/admin/quizzes'
     | '/admin/roles'
     | '/evaluations/new'
     | '/hr/employees'
@@ -325,6 +337,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/competencies'
     | '/_authenticated/admin/employees'
     | '/_authenticated/admin/job-titles'
+    | '/_authenticated/admin/quizzes'
     | '/_authenticated/admin/roles'
     | '/_authenticated/evaluations/new'
     | '/_authenticated/hr/employees'
@@ -473,6 +486,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRolesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/quizzes': {
+      id: '/_authenticated/admin/quizzes'
+      path: '/admin/quizzes'
+      fullPath: '/admin/quizzes'
+      preLoaderRoute: typeof AuthenticatedAdminQuizzesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/job-titles': {
       id: '/_authenticated/admin/job-titles'
       path: '/admin/job-titles'
@@ -604,6 +624,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminCompetenciesRoute: typeof AuthenticatedAdminCompetenciesRoute
   AuthenticatedAdminEmployeesRoute: typeof AuthenticatedAdminEmployeesRoute
   AuthenticatedAdminJobTitlesRoute: typeof AuthenticatedAdminJobTitlesRoute
+  AuthenticatedAdminQuizzesRoute: typeof AuthenticatedAdminQuizzesRoute
   AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
   AuthenticatedHrEmployeesRoute: typeof AuthenticatedHrEmployeesRoute
   AuthenticatedReportsIndividualRoute: typeof AuthenticatedReportsIndividualRoute
@@ -622,6 +643,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminCompetenciesRoute: AuthenticatedAdminCompetenciesRoute,
   AuthenticatedAdminEmployeesRoute: AuthenticatedAdminEmployeesRoute,
   AuthenticatedAdminJobTitlesRoute: AuthenticatedAdminJobTitlesRoute,
+  AuthenticatedAdminQuizzesRoute: AuthenticatedAdminQuizzesRoute,
   AuthenticatedAdminRolesRoute: AuthenticatedAdminRolesRoute,
   AuthenticatedHrEmployeesRoute: AuthenticatedHrEmployeesRoute,
   AuthenticatedReportsIndividualRoute: AuthenticatedReportsIndividualRoute,

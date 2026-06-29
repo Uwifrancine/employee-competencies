@@ -76,10 +76,24 @@ export function AppShell({ children }: { children: ReactNode }) {
         { to: "/admin/roles", label: "Roles", icon: Shield },
         { to: "/admin/job-titles", label: "Job Titles", icon: Briefcase },
         { to: "/admin/competencies", label: "Competencies", icon: Target },
+        { to: "/admin/quizzes", label: "Quizzes", icon: GraduationCap },
         { to: "/reports/org", label: "Org Report", icon: BarChart3 },
       ],
     });
   }
+
+  // Collect all known nav paths so we can detect when a more-specific path is active
+  const allNavPaths = sections.flatMap((s) => s.items.map((i) => i.to));
+
+  const isNavActive = (to: string) => {
+    if (pathname === to) return true;
+    if (!pathname.startsWith(to + "/")) return false;
+    // Only mark parent active if no longer/more-specific nav path also matches
+    const moreSpecific = allNavPaths.some(
+      (other) => other !== to && other.length > to.length && pathname.startsWith(other)
+    );
+    return !moreSpecific;
+  };
 
   const onLogout = () => {
     clearToken();
@@ -115,7 +129,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <div className="px-3 pb-2 text-[10px] uppercase tracking-wide font-semibold text-sidebar-foreground/70">{section.label}</div>
                 <div className="space-y-1">
                   {section.items.map((i) => {
-                    const active = pathname === i.to || pathname.startsWith(i.to + "/");
+                    const active = isNavActive(i.to);
                     return (
                       <Link
                         key={i.to}
