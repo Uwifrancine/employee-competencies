@@ -5,7 +5,14 @@ import { useAuth } from "@/lib/auth";
 import { PageHeader, StatusBadge } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Plus, ClipboardCheck } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/evaluations")({
@@ -38,7 +45,8 @@ function EvaluationsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get<Eval[]>("/api/evaluations")
+    api
+      .get<Eval[]>("/api/evaluations")
       .then(setRows)
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -70,7 +78,8 @@ function EvaluationsPage() {
           <CardContent className="p-5 space-y-1">
             <div className="font-medium">No job title assigned</div>
             <p className="text-sm text-muted-foreground">
-              Ask your HR or admin to assign a job title to your account so you can begin your self-evaluation.
+              Ask your HR or admin to assign a job title to your account so you can begin your
+              self-evaluation.
             </p>
           </CardContent>
         </Card>
@@ -96,7 +105,9 @@ function EvaluationsPage() {
         <>
           {/* Supervisor decision banner */}
           {latestSupervisorEval ? (
-            <Card className={`mb-4 border-2 ${latestSupervisorEval.overallPercent >= 60 ? "border-success" : "border-destructive"}`}>
+            <Card
+              className={`mb-4 border-2 ${latestSupervisorEval.overallPercent >= 60 ? "border-success" : "border-destructive"}`}
+            >
               <CardContent className="p-4 flex items-center justify-between">
                 <div>
                   <div className="font-medium">
@@ -133,14 +144,16 @@ function EvaluationsPage() {
                 <TableBody>
                   {rows.map((r) => (
                     <TableRow key={r.id}>
-                      <TableCell>{new Date(r.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell>{new Date(r.createdAt).toLocaleDateString("en-GB")}</TableCell>{" "}
                       <TableCell className="capitalize">
                         {r.evaluatorType === "self" ? "Self" : "Supervisor review"}
                       </TableCell>
                       <TableCell className="font-medium">
                         {r.evaluatorType === "self"
                           ? `${Number(r.overallPercent).toFixed(0)}%`
-                          : r.overallPercent >= 60 ? "Pass" : "Fail"}
+                          : r.overallPercent >= 60
+                            ? "Pass"
+                            : "Fail"}
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={evalStatus(r)} />
