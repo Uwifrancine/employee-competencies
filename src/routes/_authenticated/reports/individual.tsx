@@ -215,7 +215,7 @@ function IndividualReport() {
         filename: `my-report-${new Date().toISOString().split("T")[0]}.pdf`,
         image: { type: "jpeg" as const, quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { orientation: "landscape", unit: "mm", format: "a4" },
+        jsPDF: { orientation: "landscape" as const, unit: "mm", format: "a4" },
       };
 
       html2pdf()

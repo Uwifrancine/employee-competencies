@@ -241,39 +241,46 @@ function SupervisorEval() {
           <CardTitle className="text-base">Your decision</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {alreadyEvaluated && (
-            <div className="text-sm text-amber-600 bg-amber-50 rounded-md px-3 py-2">
-              You have already submitted a decision for this employee. Submitting again will add another record.
+          {alreadyEvaluated ? (
+            <div className="flex items-start gap-2 text-sm text-success bg-success/10 rounded-md px-3 py-3">
+              <CheckCircle className="size-4 mt-0.5 shrink-0" />
+              <span>
+                You have already submitted a supervisor evaluation for {emp.fullName}. An
+                evaluation can only be recorded once per employee.
+              </span>
             </div>
+          ) : (
+            <>
+              <div>
+                <Label>Notes (optional)</Label>
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Add feedback or development notes…"
+                  className="resize-none h-24 mt-1"
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => decide("pass")}
+                  disabled={!!saving}
+                  className="flex-1 bg-success text-success-foreground hover:bg-success/90"
+                >
+                  <CheckCircle className="size-4 mr-2" />
+                  {saving === "pass" ? "Saving…" : "Approve (Pass)"}
+                </Button>
+                <Button
+                  onClick={() => decide("fail")}
+                  disabled={!!saving}
+                  variant="outline"
+                  className="flex-1 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                >
+                  <AlertTriangle className="size-4 mr-2" />
+                  {saving === "fail" ? "Saving…" : "Needs Development (Fail)"}
+                </Button>
+              </div>
+            </>
           )}
-          <div>
-            <Label>Notes (optional)</Label>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add feedback or development notes…"
-              className="resize-none h-24 mt-1"
-            />
-          </div>
-          <div className="flex gap-3">
-            <Button
-              onClick={() => decide("pass")}
-              disabled={!!saving}
-              className="flex-1 bg-success text-success-foreground hover:bg-success/90"
-            >
-              <CheckCircle className="size-4 mr-2" />
-              {saving === "pass" ? "Saving…" : "Approve (Pass)"}
-            </Button>
-            <Button
-              onClick={() => decide("fail")}
-              disabled={!!saving}
-              variant="outline"
-              className="flex-1 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            >
-              <AlertTriangle className="size-4 mr-2" />
-              {saving === "fail" ? "Saving…" : "Needs Development (Fail)"}
-            </Button>
-          </div>
         </CardContent>
       </Card>
 

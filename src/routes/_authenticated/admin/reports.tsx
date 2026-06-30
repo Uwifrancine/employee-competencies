@@ -104,8 +104,15 @@ function AdminReports() {
       jsPDF: { orientation: "landscape", unit: "mm", format: "a4" },
     };
 
-    html2pdf().set(opt).from(element).save();
-    toast.success("PDF downloaded successfully!");
+    html2pdf()
+      .set(opt)
+      .from(element)
+      .save()
+      .then(() => toast.success("PDF downloaded successfully!"))
+      .catch((err: any) => {
+        console.error("PDF export error:", err);
+        toast.error("Failed to export PDF");
+      });
   };
 
   const downloadExcel = () => {
@@ -257,12 +264,21 @@ function AdminReports() {
                       <div className="p-3 rounded-lg bg-muted">
                         <div className="text-sm text-muted-foreground">Average Score</div>
                         <div className="text-2xl font-bold">
-                          {jt.employees.length > 0
-                            ? (
-                                jt.employees.reduce((sum, e) => sum + (e.evaluations.length > 0 ? e.evaluations.reduce((s, ev) => s + ev.overallPercent, 0) / e.evaluations.length : 0), 0) / jt.employees.length
-                              ).toFixed(1)
-                            : "—"}
-                          %
+                          {(() => {
+                            // Average of each evaluated employee's mean score — employees
+                            // with no evaluations are excluded so they don't drag it down.
+                            const evaluated = jt.employees.filter((e) => e.evaluations.length > 0);
+                            if (evaluated.length === 0) return "—";
+                            const avg =
+                              evaluated.reduce(
+                                (sum, e) =>
+                                  sum +
+                                  e.evaluations.reduce((s, ev) => s + ev.overallPercent, 0) /
+                                    e.evaluations.length,
+                                0
+                              ) / evaluated.length;
+                            return `${avg.toFixed(1)}%`;
+                          })()}
                         </div>
                       </div>
                       <div className="p-3 rounded-lg bg-muted">

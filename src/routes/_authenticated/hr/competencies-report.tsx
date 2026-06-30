@@ -112,8 +112,15 @@ function CompetenciesReport() {
       jsPDF: { orientation: "landscape", unit: "mm", format: "a4" },
     };
 
-    html2pdf().set(opt).from(element).save();
-    toast.success("PDF downloaded successfully!");
+    html2pdf()
+      .set(opt)
+      .from(element)
+      .save()
+      .then(() => toast.success("PDF downloaded successfully!"))
+      .catch((err: any) => {
+        console.error("PDF export error:", err);
+        toast.error("Failed to export PDF");
+      });
   };
 
   const downloadExcel = () => {
@@ -190,12 +197,15 @@ function CompetenciesReport() {
         <Card>
           <CardContent className="p-4">
             <label className="text-sm font-medium">Filter by Job Title</label>
-            <Select value={selectedJobTitle} onValueChange={setSelectedJobTitle}>
+            <Select
+              value={selectedJobTitle || "all"}
+              onValueChange={(v) => setSelectedJobTitle(v === "all" ? "" : v)}
+            >
               <SelectTrigger className="w-full mt-2">
                 <SelectValue placeholder="All job titles" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Competencies</SelectItem>
+                <SelectItem value="all">All Competencies</SelectItem>
                 {jobTitles.map((jt) => (
                   <SelectItem key={jt.id} value={jt.id}>
                     {jt.name}

@@ -13,14 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Plus, ClipboardCheck, GraduationCap } from "lucide-react";
-import { QuizModal } from "@/components/QuizModal";
+import { Plus, ClipboardCheck } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/evaluations")({
   ssr: false,
@@ -51,32 +44,15 @@ function EvaluationsPage() {
   const { profile } = useAuth();
   const [rows, setRows] = useState<Eval[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pendingQuizId, setPendingQuizId] = useState<string | null>(null);
-  const [showQuizModal, setShowQuizModal] = useState(false);
 
   useEffect(() => {
     if (pathname !== "/evaluations") return;
 
-    Promise.all([
-      api
-        .get<Eval[]>("/api/evaluations")
-        .then(setRows)
-        .catch(() => {}),
-      api
-        .get<any[]>("/api/quiz-assignments")
-        .then((assignments) => {
-          console.log("Checking for pending quizzes:", assignments);
-          const pending = assignments.find((a) => a.status === "pending");
-          if (pending) {
-            console.log("Found pending quiz:", pending.id);
-            setPendingQuizId(pending.id);
-            setShowQuizModal(true);
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to load quizzes:", err);
-        }),
-    ]).finally(() => setLoading(false));
+    api
+      .get<Eval[]>("/api/evaluations")
+      .then(setRows)
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [pathname]);
 
   if (pathname !== "/evaluations") return <Outlet />;
@@ -195,39 +171,6 @@ function EvaluationsPage() {
           </Card>
         </>
       )}
-
-      {/* Quiz Modal - Mandatory, cannot be closed */}
-      <Dialog open={showQuizModal} onOpenChange={() => {}}>
-        <DialogContent
-          className="sm:max-w-2xl max-h-screen overflow-y-auto"
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-        >
-          {pendingQuizId && (
-            <div className="space-y-4">
-              <DialogHeader>
-                <div className="flex items-center gap-2">
-                  <GraduationCap className="size-5 text-accent" />
-                  <DialogTitle>Complete Your Quiz</DialogTitle>
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  You must complete this quiz to continue. You cannot close this dialog.
-                </p>
-              </DialogHeader>
-              <div className="py-4">
-                <QuizModal
-                  assignmentId={pendingQuizId}
-                  onComplete={() => {
-                    setShowQuizModal(false);
-                    setPendingQuizId(null);
-                    window.location.reload();
-                  }}
-                />
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -36,6 +36,7 @@ function EmployeeDetailPage() {
   const { user } = useAuth();
   const [emp, setEmp] = useState<Emp | null>(null);
   const [selfEval, setSelfEval] = useState<Eval | null>(null);
+  const [supervisorEvaluated, setSupervisorEvaluated] = useState(false);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
 
   useEffect(() => {
@@ -57,6 +58,13 @@ function EmployeeDetailPage() {
         const full = await api.get<Eval>(`/api/evaluations/${selfEvals[0].id}`);
         setSelfEval(full);
       }
+
+      // A supervisor evaluation can only be recorded once per employee
+      setSupervisorEvaluated(
+        allEvals.some(
+          (ev) => (ev as any).employee?.id === employeeId && ev.evaluatorType === "supervisor"
+        )
+      );
 
       // Quiz assignments for this employee created by this supervisor
       const mine = allAssignments.filter(
@@ -128,14 +136,20 @@ function EmployeeDetailPage() {
               </div>
 
               <div className="pt-2">
-                <Link
-                  to="/supervisor/evaluate/$employeeId"
-                  params={{ employeeId }}
-                >
-                  <Button size="sm" className="bg-accent text-accent-foreground">
-                    Write supervisor evaluation
-                  </Button>
-                </Link>
+                {supervisorEvaluated ? (
+                  <span className="inline-flex items-center rounded-full bg-success/10 text-success px-3 py-1 text-xs font-medium">
+                    Supervisor evaluation already submitted
+                  </span>
+                ) : (
+                  <Link
+                    to="/supervisor/evaluate/$employeeId"
+                    params={{ employeeId }}
+                  >
+                    <Button size="sm" className="bg-accent text-accent-foreground">
+                      Write supervisor evaluation
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
           ) : (

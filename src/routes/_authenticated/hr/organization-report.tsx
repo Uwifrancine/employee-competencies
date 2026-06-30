@@ -303,7 +303,7 @@ function OrganizationReport() {
                     <div class="competency-item">
                       <div class="competency-name">${q.title}</div>
                       <div class="competency-score">
-                        Score: ${q.scorePct.toFixed(0)}% | Date: ${new Date(q.submittedAt).toLocaleDateString()}
+                        Score: ${q.scorePct != null ? q.scorePct.toFixed(0) + "%" : "—"} | Date: ${q.submittedAt ? new Date(q.submittedAt).toLocaleDateString() : "—"}
                       </div>
                     </div>
                     `
@@ -329,7 +329,7 @@ function OrganizationReport() {
         filename: `organization-report-${new Date().toISOString().split("T")[0]}.pdf`,
         image: { type: "jpeg" as const, quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { orientation: "landscape", unit: "mm", format: "a4" },
+        jsPDF: { orientation: "landscape" as const, unit: "mm", format: "a4" },
       };
 
       html2pdf()

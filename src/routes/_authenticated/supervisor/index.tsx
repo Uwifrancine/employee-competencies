@@ -22,6 +22,7 @@ interface Report {
   latestEvalDate: string | null;
   openDevPlans: number;
   avgQuizScore: number | null;
+  supervisorEvaluated: boolean;
 }
 
 function SupervisorPage() {
@@ -75,16 +76,22 @@ function SupervisorPage() {
                     >
                       <Eye className="size-3 mr-1" /> Evaluations
                     </Button>
-                    <Button
-                      size="sm"
-                      className="bg-accent text-accent-foreground"
-                      onClick={() => {
-                        setSelectedEmployee({ id: r.id, name: r.fullName });
-                        setEvaluateDialogOpen(true);
-                      }}
-                    >
-                      Evaluate
-                    </Button>
+                    {r.supervisorEvaluated ? (
+                      <span className="inline-flex items-center rounded-full bg-success/10 text-success px-3 py-1 text-xs font-medium">
+                        Evaluated
+                      </span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="bg-accent text-accent-foreground"
+                        onClick={() => {
+                          setSelectedEmployee({ id: r.id, name: r.fullName });
+                          setEvaluateDialogOpen(true);
+                        }}
+                      >
+                        Evaluate
+                      </Button>
+                    )}
                     {belowTarget && r.openDevPlans === 0 && (
                       <Link to="/supervisor/plan/new/$employeeId" params={{ employeeId: r.id }}>
                         <Button

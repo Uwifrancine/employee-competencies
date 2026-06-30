@@ -152,7 +152,7 @@ function TeamReport() {
                                 {e.overallPercent.toFixed(0)}%
                               </span>
                             </div>
-                            {e.quizScore !== null && (
+                            {e.quizScore != null && (
                               <div className="text-sm">
                                 <span className="text-muted-foreground flex items-center gap-1">
                                   <GraduationCap className="size-3" /> Quiz:

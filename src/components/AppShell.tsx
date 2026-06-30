@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { clearToken } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import {
@@ -15,8 +15,11 @@ import {
   BookOpen,
   BarChart3,
   GraduationCap,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/NotificationBell";
+import { useNotifications } from "@/hooks/useNotifications";
 
 type NavItem = { to: string; label: string; icon: any };
 type NavSection = { label: string; items: NavItem[] };
@@ -26,6 +29,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
+
+  // Single notification poller for the whole shell (both desktop + mobile bells
+  // share this state so popups never fire twice).
+  const notify = useNotifications(!!auth.user);
+  useEffect(() => {
+    if (auth.user && typeof Notification !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+  }, [auth.user]);
 
   const sections: NavSection[] = [];
 
@@ -97,6 +109,26 @@ export function AppShell({ children }: { children: ReactNode }) {
     return !moreSpecific;
   };
 
+  // Accordion: track which sections are expanded. The first section ("My Profile")
+  // is expanded by default, plus any section containing the active route.
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    setExpanded((prev) => {
+      const next = { ...prev };
+      sections.forEach((section, idx) => {
+        const hasActive = section.items.some((i) => isNavActive(i.to));
+        if (hasActive || (idx === 0 && prev[section.label] === undefined)) {
+          next[section.label] = true;
+        }
+      });
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  const toggleSection = (label: string) =>
+    setExpanded((prev) => ({ ...prev, [label]: !prev[label] }));
+
   const onLogout = () => {
     clearToken();
     navigate({ to: "/auth", replace: true });
@@ -115,7 +147,17 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="md:hidden flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground">
         <button onClick={() => setOpen((v) => !v)} className="p-1"><Menu className="size-5" /></button>
         <div className="font-semibold">Competency Manager</div>
-        <button onClick={onLogout}><LogOut className="size-5" /></button>
+        <div className="flex items-center gap-1">
+          {auth.user && (
+            <NotificationBell
+              items={notify.items}
+              unreadCount={notify.unreadCount}
+              markRead={notify.markRead}
+              markAllRead={notify.markAllRead}
+            />
+          )}
+          <button onClick={onLogout}><LogOut className="size-5" /></button>
+        </div>
       </div>
 
       <div className="md:grid md:grid-cols-[260px_1fr]">
@@ -125,32 +167,45 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="text-xs text-sidebar-foreground/70 mt-1">{auth.profile?.full_name}</div>
             <div className="text-[10px] uppercase tracking-wide text-accent mt-1">{auth.primaryRoleLabel}</div>
           </div>
-          <nav className="p-3 space-y-6">
-            {sections.map((section, idx) => (
-              <div key={section.label} className={idx > 0 ? "pt-4 border-t border-sidebar-foreground/10" : ""}>
-                <div className="px-3 pb-2 text-[10px] uppercase tracking-wide font-semibold text-sidebar-foreground/70">{section.label}</div>
-                <div className="space-y-1">
-                  {section.items.map((i) => {
-                    const active = isNavActive(i.to);
-                    return (
-                      <Link
-                        key={i.to}
-                        to={i.to}
-                        onClick={() => setOpen(false)}
-                        className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
-                          active
-                            ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                            : "hover:bg-sidebar-accent"
-                        }`}
-                      >
-                        <i.icon className="size-4" />
-                        {i.label}
-                      </Link>
-                    );
-                  })}
+          <nav className="p-3 space-y-2">
+            {sections.map((section, idx) => {
+              const isOpen = expanded[section.label] ?? false;
+              return (
+                <div key={section.label} className={idx > 0 ? "pt-2 border-t border-sidebar-foreground/10" : ""}>
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(section.label)}
+                    aria-expanded={isOpen}
+                    className="flex w-full items-center justify-between rounded-md px-3 py-2 text-[10px] uppercase tracking-wide font-semibold text-sidebar-foreground/70 hover:bg-sidebar-accent transition-colors"
+                  >
+                    <span>{section.label}</span>
+                    <ChevronDown className={`size-3.5 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {isOpen && (
+                    <div className="space-y-1 mt-1">
+                      {section.items.map((i) => {
+                        const active = isNavActive(i.to);
+                        return (
+                          <Link
+                            key={i.to}
+                            to={i.to}
+                            onClick={() => setOpen(false)}
+                            className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
+                              active
+                                ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                                : "hover:bg-sidebar-accent"
+                            }`}
+                          >
+                            <i.icon className="size-4" />
+                            {i.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </nav>
           <div className="hidden md:block p-3 mt-auto">
             <Button onClick={onLogout} variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent">
@@ -159,7 +214,20 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </aside>
 
-        <main className="p-4 md:p-8">{children}</main>
+        <div className="min-w-0">
+          {/* Desktop top bar — notification bell pinned to the top-right corner */}
+          {auth.user && (
+            <header className="hidden md:flex sticky top-0 z-30 items-center justify-end gap-2 h-14 px-8 bg-background/80 backdrop-blur border-b border-border">
+              <NotificationBell
+                items={notify.items}
+                unreadCount={notify.unreadCount}
+                markRead={notify.markRead}
+                markAllRead={notify.markAllRead}
+              />
+            </header>
+          )}
+          <main className="p-4 md:p-8">{children}</main>
+        </div>
       </div>
     </div>
   );
