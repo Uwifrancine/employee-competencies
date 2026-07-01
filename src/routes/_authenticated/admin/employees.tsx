@@ -30,7 +30,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { UserPlus, Copy, Pencil } from "lucide-react";
+import { UserPlus, Copy, Pencil, Lock } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/employees")({
   ssr: false,
@@ -56,19 +56,32 @@ function EmployeesPage() {
   const [rows, setRows] = useState<Employee[]>([]);
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
   const [showCred, setShowCred] = useState<{ email: string; password: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [resettingId, setResettingId] = useState<string | null>(null);
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetError, setResetError] = useState<string>("");
   const [form, setForm] = useState({
     email: "",
     fullName: "",
     password: "",
     role: "employee" as "admin" | "hr" | "employee",
   });
+  const [formErrors, setFormErrors] = useState<{
+    email?: string;
+    fullName?: string;
+    password?: string;
+  }>({});
   const [editForm, setEditForm] = useState({
     fullName: "",
     email: "",
     role: "employee" as "admin" | "hr" | "employee",
   });
+  const [editErrors, setEditErrors] = useState<{
+    email?: string;
+    fullName?: string;
+  }>({});
 
   const load = async () => {
     const emps = await api.get<Employee[]>("/api/employees");
@@ -78,8 +91,32 @@ function EmployeesPage() {
     load();
   }, []);
 
+  const validateCreateForm = () => {
+    const errors: typeof formErrors = {};
+
+    if (!form.fullName.trim()) {
+      errors.fullName = "Full name is required";
+    } else if (form.fullName.trim().length < 2) {
+      errors.fullName = "Full name must be at least 2 characters";
+    }
+
+    if (!form.email.trim()) {
+      errors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      errors.email = "Please enter a valid email address";
+    }
+
+    if (form.password.trim() && form.password.length < 6) {
+      errors.password = "Password must be at least 6 characters (or leave blank to auto-generate)";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const submit = async () => {
-    if (!form.email || !form.fullName) return toast.error("Email and name required");
+    if (!validateCreateForm()) return;
+
     const tempPassword = form.password || generateTempPassword();
     try {
       await api.post("/api/auth/register", {
@@ -91,9 +128,10 @@ function EmployeesPage() {
       setShowCred({ email: form.email, password: tempPassword });
       setOpen(false);
       setForm({ email: "", fullName: "", password: "", role: "employee" });
+      setFormErrors({});
       load();
     } catch (e: any) {
-      toast.error(e?.message ?? "Failed");
+      toast.error(e?.message ?? "Failed to create employee");
     }
   };
 
@@ -117,8 +155,28 @@ function EmployeesPage() {
     setEditOpen(true);
   };
 
+  const validateEditForm = () => {
+    const errors: typeof editErrors = {};
+
+    if (!editForm.fullName.trim()) {
+      errors.fullName = "Full name is required";
+    } else if (editForm.fullName.trim().length < 2) {
+      errors.fullName = "Full name must be at least 2 characters";
+    }
+
+    if (!editForm.email.trim()) {
+      errors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.email)) {
+      errors.email = "Please enter a valid email address";
+    }
+
+    setEditErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const submitEdit = async () => {
-    if (!editForm.email || !editForm.fullName) return toast.error("Email and name required");
+    if (!validateEditForm()) return;
+
     try {
       await api.put(`/api/employees/${editingId}`, {
         fullName: editForm.fullName,
@@ -127,9 +185,48 @@ function EmployeesPage() {
       });
       toast.success("Employee updated successfully");
       setEditOpen(false);
+      setEditErrors({});
       load();
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to update employee");
+    }
+  };
+
+  const openResetPassword = (employee: Employee) => {
+    setResettingId(employee.id);
+    setResetPassword("");
+    setResetError("");
+    setResetOpen(true);
+  };
+
+  const submitResetPassword = async () => {
+    if (!resetPassword.trim()) {
+      setResetError("Password is required");
+      return;
+    }
+    if (resetPassword.length < 6) {
+      setResetError("Password must be at least 6 characters");
+      return;
+    }
+
+    try {
+      await api.put(`/api/employees/${resettingId}/reset-password`, {
+        password: resetPassword,
+      });
+
+      const employee = rows.find((r) => r.id === resettingId);
+      setShowCred({
+        email: employee?.email || "",
+        password: resetPassword,
+      });
+
+      toast.success("Password reset successfully");
+      setResetOpen(false);
+      setResetPassword("");
+      setResetError("");
+      setResettingId(null);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to reset password");
     }
   };
 
@@ -139,7 +236,16 @@ function EmployeesPage() {
         title="Employees"
         subtitle="Register new employees and manage their access"
         action={
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog
+            open={open}
+            onOpenChange={(isOpen) => {
+              if (!isOpen) {
+                setFormErrors({});
+                setForm({ email: "", fullName: "", password: "", role: "employee" });
+              }
+              setOpen(isOpen);
+            }}
+          >
             <DialogTrigger asChild>
               <Button className="bg-accent text-accent-foreground hover:opacity-90">
                 <UserPlus className="size-4 mr-1" /> New employee
@@ -149,29 +255,64 @@ function EmployeesPage() {
               <DialogHeader>
                 <DialogTitle>Register employee</DialogTitle>
               </DialogHeader>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div>
-                  <Label>Full name</Label>
+                  <Label className={formErrors.fullName ? "text-destructive" : ""}>Full name</Label>
                   <Input
                     value={form.fullName}
-                    onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                    onChange={(e) => {
+                      setForm({ ...form, fullName: e.target.value });
+                      if (formErrors.fullName) {
+                        setFormErrors({ ...formErrors, fullName: undefined });
+                      }
+                    }}
+                    className={`${
+                      formErrors.fullName ? "border-destructive focus-visible:ring-destructive" : ""
+                    }`}
                   />
+                  {formErrors.fullName && (
+                    <p className="text-xs text-destructive mt-1">{formErrors.fullName}</p>
+                  )}
                 </div>
                 <div>
-                  <Label>Email</Label>
+                  <Label className={formErrors.email ? "text-destructive" : ""}>Email</Label>
                   <Input
                     type="email"
                     value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    onChange={(e) => {
+                      setForm({ ...form, email: e.target.value });
+                      if (formErrors.email) {
+                        setFormErrors({ ...formErrors, email: undefined });
+                      }
+                    }}
+                    className={`${
+                      formErrors.email ? "border-destructive focus-visible:ring-destructive" : ""
+                    }`}
                   />
+                  {formErrors.email && (
+                    <p className="text-xs text-destructive mt-1">{formErrors.email}</p>
+                  )}
                 </div>
                 <div>
-                  <Label>Temporary password (leave blank to auto-generate)</Label>
+                  <Label className={formErrors.password ? "text-destructive" : ""}>
+                    Temporary password (leave blank to auto-generate)
+                  </Label>
                   <Input
                     type="text"
                     value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    onChange={(e) => {
+                      setForm({ ...form, password: e.target.value });
+                      if (formErrors.password) {
+                        setFormErrors({ ...formErrors, password: undefined });
+                      }
+                    }}
+                    className={`${
+                      formErrors.password ? "border-destructive focus-visible:ring-destructive" : ""
+                    }`}
                   />
+                  {formErrors.password && (
+                    <p className="text-xs text-destructive mt-1">{formErrors.password}</p>
+                  )}
                 </div>
                 <div>
                   <Label>Role</Label>
@@ -223,12 +364,22 @@ function EmployeesPage() {
                     />
                   </TableCell>
                   <TableCell>
-                    <button
-                      onClick={() => openEdit(r)}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <Pencil className="size-4" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => openEdit(r)}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        title="Edit employee"
+                      >
+                        <Pencil className="size-4" />
+                      </button>
+                      <button
+                        onClick={() => openResetPassword(r)}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        title="Reset password"
+                      >
+                        <Lock className="size-4" />
+                      </button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -272,26 +423,57 @@ function EmployeesPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+      <Dialog
+        open={editOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setEditErrors({});
+            setEditingId(null);
+          }
+          setEditOpen(isOpen);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Employee</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div>
-              <Label>Full name</Label>
+              <Label className={editErrors.fullName ? "text-destructive" : ""}>Full name</Label>
               <Input
                 value={editForm.fullName}
-                onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
+                onChange={(e) => {
+                  setEditForm({ ...editForm, fullName: e.target.value });
+                  if (editErrors.fullName) {
+                    setEditErrors({ ...editErrors, fullName: undefined });
+                  }
+                }}
+                className={`${
+                  editErrors.fullName ? "border-destructive focus-visible:ring-destructive" : ""
+                }`}
               />
+              {editErrors.fullName && (
+                <p className="text-xs text-destructive mt-1">{editErrors.fullName}</p>
+              )}
             </div>
             <div>
-              <Label>Email</Label>
+              <Label className={editErrors.email ? "text-destructive" : ""}>Email</Label>
               <Input
                 type="email"
                 value={editForm.email}
-                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                onChange={(e) => {
+                  setEditForm({ ...editForm, email: e.target.value });
+                  if (editErrors.email) {
+                    setEditErrors({ ...editErrors, email: undefined });
+                  }
+                }}
+                className={`${
+                  editErrors.email ? "border-destructive focus-visible:ring-destructive" : ""
+                }`}
               />
+              {editErrors.email && (
+                <p className="text-xs text-destructive mt-1">{editErrors.email}</p>
+              )}
             </div>
             <div>
               <Label>Role</Label>
@@ -311,6 +493,57 @@ function EmployeesPage() {
             </div>
             <Button className="w-full bg-accent text-accent-foreground" onClick={submitEdit}>
               Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={resetOpen}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setResetPassword("");
+            setResetError("");
+            setResettingId(null);
+          }
+          setResetOpen(isOpen);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Employee Password</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-5">
+            {resettingId && (
+              <div className="bg-muted/50 p-3 rounded-md border border-border">
+                <p className="text-sm font-medium text-foreground leading-relaxed">
+                  Enter a new temporary password for{" "}
+                  <span className="font-semibold text-accent">
+                    {rows.find((r) => r.id === resettingId)?.fullName}
+                  </span>
+                  . They'll be asked to change it on their next sign-in.
+                </p>
+              </div>
+            )}
+            <div>
+              <Label className={resetError ? "text-destructive" : ""}>New Password</Label>
+              <Input
+                type="password"
+                value={resetPassword}
+                onChange={(e) => {
+                  setResetPassword(e.target.value);
+                  if (resetError) setResetError("");
+                }}
+                placeholder="Enter temporary password (min. 6 characters)"
+                className={`${resetError ? "border-destructive focus-visible:ring-destructive" : ""}`}
+              />
+              {resetError && <p className="text-xs text-destructive mt-1">{resetError}</p>}
+            </div>
+            <Button
+              className="w-full bg-accent text-accent-foreground"
+              onClick={submitResetPassword}
+            >
+              Reset Password
             </Button>
           </div>
         </DialogContent>

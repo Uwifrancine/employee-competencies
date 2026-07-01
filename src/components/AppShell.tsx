@@ -16,8 +16,16 @@ import {
   BarChart3,
   GraduationCap,
   ChevronDown,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useNotifications } from "@/hooks/useNotifications";
 
@@ -135,7 +143,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   if (auth.loading) {
-    return <div className="min-h-screen grid place-items-center text-muted-foreground">Loading…</div>;
+    return (
+      <div className="min-h-screen grid place-items-center bg-background">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <div>
+            <p className="text-lg font-medium text-foreground">Loading your profile</p>
+            <p className="text-sm text-muted-foreground mt-1">Initializing the application…</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (auth.profile?.must_change_password && pathname !== "/change-password") {
@@ -162,14 +180,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="md:grid md:grid-cols-[260px_1fr]">
         <aside className={`${open ? "block" : "hidden"} md:block bg-sidebar text-sidebar-foreground md:min-h-screen`}>
-          <div className="hidden md:block p-6">
+          <div className="hidden md:block p-6 border-b border-sidebar-foreground/10">
             <div className="text-lg font-bold">Competency Manager</div>
-            <div className="text-xs text-sidebar-foreground/70 mt-1">{auth.profile?.full_name}</div>
-            <div className="text-[10px] uppercase tracking-wide text-accent mt-1">{auth.primaryRoleLabel}</div>
           </div>
           <nav className="p-3 space-y-2">
             {sections.map((section, idx) => {
-              const isOpen = expanded[section.label] ?? false;
+              const isOpen = expanded[section.label] ?? (idx === 0);
               return (
                 <div key={section.label} className={idx > 0 ? "pt-2 border-t border-sidebar-foreground/10" : ""}>
                   <button
@@ -207,23 +223,54 @@ export function AppShell({ children }: { children: ReactNode }) {
               );
             })}
           </nav>
-          <div className="hidden md:block p-3 mt-auto">
-            <Button onClick={onLogout} variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent">
-              <LogOut className="size-4 mr-2" /> Sign out
-            </Button>
-          </div>
         </aside>
 
         <div className="min-w-0">
-          {/* Desktop top bar — notification bell pinned to the top-right corner */}
+          {/* Desktop top bar — notification bell and profile menu pinned to the top-right corner */}
           {auth.user && (
-            <header className="hidden md:flex sticky top-0 z-30 items-center justify-end gap-2 h-14 px-8 bg-background/80 backdrop-blur border-b border-border">
-              <NotificationBell
-                items={notify.items}
-                unreadCount={notify.unreadCount}
-                markRead={notify.markRead}
-                markAllRead={notify.markAllRead}
-              />
+            <header className="hidden md:flex sticky top-0 z-30 items-center justify-between gap-4 h-14 px-8 bg-background/80 backdrop-blur border-b border-border">
+              <div></div>
+              <div className="flex items-center gap-4">
+                <NotificationBell
+                  items={notify.items}
+                  unreadCount={notify.unreadCount}
+                  markRead={notify.markRead}
+                  markAllRead={notify.markAllRead}
+                />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="flex items-center gap-3 px-3 py-2 h-auto bg-gray-100 hover:bg-gray-200 text-gray-900 border-0 rounded-lg transition-all duration-200 data-[state=open]:bg-gray-200 data-[state=open]:shadow-md">
+                      <div className="w-9 h-9 rounded-full bg-gray-300 flex items-center justify-center shrink-0">
+                        <User className="size-5 text-gray-600" />
+                      </div>
+                      <div className="text-left hidden sm:block">
+                        <div className="text-sm font-semibold leading-tight text-gray-900">{auth.profile?.full_name}</div>
+                        <div className="text-xs text-gray-500">{auth.primaryRoleLabel}</div>
+                      </div>
+                      <ChevronDown className="size-4 text-gray-400 ml-1 shrink-0 transition-transform" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64 p-0 border border-gray-200 shadow-lg">
+                    <div className="px-4 py-4 bg-white">
+                      <p className="font-semibold text-sm text-gray-900 leading-tight">{auth.profile?.full_name}</p>
+                      <p className="text-xs text-gray-500 mt-1">{auth.profile?.email}</p>
+                      <div className="mt-3 inline-block">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-600 bg-gray-100 px-2.5 py-1.5 rounded-md">{auth.primaryRoleLabel}</span>
+                      </div>
+                    </div>
+                    <div className="border-t border-gray-100"></div>
+                    <div className="p-2">
+                      <button
+                        onClick={onLogout}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-destructive bg-destructive/5 hover:bg-destructive/10 rounded-md transition-colors duration-150"
+                      >
+                        <LogOut className="size-4 shrink-0" />
+                        <span>Sign out</span>
+                      </button>
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </header>
           )}
           <main className="p-4 md:p-8">{children}</main>
